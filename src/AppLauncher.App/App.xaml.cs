@@ -85,6 +85,12 @@ public partial class App : Application
             var settings = sp.GetRequiredService<LauncherSettings>();
             return new FolderScanner(FolderRootResolver.Resolve(settings), settings.FolderScanDepth);
         });
+        services.AddSingleton(_ =>
+        {
+            var history = new UsageHistory(UsageHistory.DefaultPath);
+            history.Load();
+            return history;
+        });
         services.AddSingleton<AppIndex>();
         services.AddSingleton<IAppLauncher, ShellAppLauncher>();
         services.AddSingleton<IconExtractor>();

@@ -2,7 +2,12 @@ using AppLauncher.Core.Models;
 
 namespace AppLauncher.Core.Search;
 
-public sealed record SearchResult(AppEntry Entry, int Score);
+/// <param name="Score">Total used for ordering: match score plus <paramref name="Boost"/>.</param>
+/// <param name="Boost">Usage-history bonus (0 when there is no history).</param>
+public sealed record SearchResult(AppEntry Entry, int Score, int Boost = 0)
+{
+    public int MatchScore => Score - Boost;
+}
 
 /// <summary>Ranks index entries against a query. Multi-word queries require every word to match.</summary>
 public static class AppSearcher
@@ -10,7 +15,12 @@ public static class AppSearcher
     /// <summary>Keyword hits (exe name, folder, description) count a little less than name hits.</summary>
     private const double KeywordWeight = 0.85;
 
-    public static IReadOnlyList<SearchResult> Search(string? query, IReadOnlyList<AppEntry> entries, int maxResults = 8)
+    /// <param name="boost">Optional usage bonus per matched entry, added on top of the match score.</param>
+    public static IReadOnlyList<SearchResult> Search(
+        string? query,
+        IReadOnlyList<AppEntry> entries,
+        int maxResults = 8,
+        Func<AppEntry, int>? boost = null)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
@@ -41,7 +51,9 @@ public static class AppSearcher
 
             if (matchedAll)
             {
-                results.Add(new SearchResult(entry, total / terms.Length));
+                var matchScore = total / terms.Length;
+                var bonus = boost is null ? 0 : Math.Max(0, boost(entry));
+                results.Add(new SearchResult(entry, matchScore + bonus, bonus));
             }
         }
 

@@ -39,8 +39,9 @@ src/
     Indexing/ShellLinkResolver.cs  IShellLinkW COM으로 .lnk 대상 해석
     Indexing/FolderScanner.cs      설정된 루트 폴더와 하위 폴더(기본 2단계) 인덱싱
     Search/FuzzyMatcher.cs         정확 > 접두 > 단어 시작 > 약어 > 포함 > 순서 일치 순 점수
-    Search/AppSearcher.cs          이름 + 키워드 랭킹, 다중 단어 질의
+    Search/AppSearcher.cs          이름 + 키워드 랭킹, 다중 단어 질의, 사용 기록 가산점
     Services/AppIndex.cs           소스 병합, 백그라운드 갱신
+    Services/UsageHistory.cs       실행 횟수·최근 실행·검색어 기록 (history.json)
     Services/IAppLauncher.cs       ShellExecute로 .lnk 실행
     Services/SettingsStore.cs      %APPDATA%\AppLauncherForWindows\settings.json
 tests/
@@ -70,6 +71,7 @@ dotnet run --project src/AppLauncher.App
 - 글자 입력: 결과 최대 8개 표시, 첫 항목 자동 선택. 각 행 오른쪽에 "앱" 또는 "폴더" 표시
 - `↑` `↓`: 선택 이동, `Enter` 또는 클릭: 앱 실행 또는 폴더 열기 후 창 숨김
 - `Ctrl+1` ~ `Ctrl+7`: 선택을 옮기지 않고 2번째~8번째 결과를 바로 실행. 각 행 오른쪽에 해당 키가 표시됩니다 (1번째는 `Enter`)
+- 자주 실행한 항목이 위로 올라옵니다. 실행 횟수(최대 +300), 최근 실행(하루 이내 +60, 일주일 +40, 한 달 +20), 같은 검색어로 실행한 적이 있으면 +400(검색어가 일부만 겹치면 +200)을 매칭 점수에 더합니다. 기록은 `%APPDATA%\AppLauncherForWindows\history.json`에 저장되며, 6개월간 실행하지 않은 항목은 정리됩니다. 파일을 지우면 초기화됩니다
 - `Esc` 또는 포커스 이탈: 창 숨김
 - 트레이 아이콘 왼쪽 클릭: 창 열기/닫기, 오른쪽 클릭: 메뉴(열기, 종료)
 
@@ -128,7 +130,7 @@ git push origin v0.1.0
 1. ~~솔루션 스캐폴딩, 빈 창, 전역 단축키 토글~~
 2. ~~시작 메뉴 스캐너, 아이콘 추출, 퍼지 검색, 결과 목록 표시와 실행~~
    ~~폴더 인덱싱과 Explorer로 열기~~
-3. 사용 빈도 랭킹, 실행 기록, 한글 초성 검색
+3. ~~사용 빈도 랭킹, 실행 기록~~, 한글 초성 검색
 4. 자동 시작, 설정 화면
 5. 스토어 앱(UWP) 스캐너, 즐겨찾기, 라이트/다크 테마
 6. ~~GitHub Actions 빌드와 릴리스~~
