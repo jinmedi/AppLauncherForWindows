@@ -13,6 +13,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AppIndex _index;
     private readonly IAppLauncher _launcher;
     private readonly IconExtractor _icons;
+    private readonly UsageHistory _history;
     private readonly SynchronizationContext? _uiContext;
 
     [ObservableProperty]
@@ -25,16 +26,18 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _statusText = string.Empty;
 
-    public MainViewModel(LauncherSettings settings, AppIndex index, IAppLauncher launcher, IconExtractor icons)
+    public MainViewModel(LauncherSettings settings, AppIndex index, IAppLauncher launcher, IconExtractor icons, UsageHistory history)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(index);
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(icons);
+        ArgumentNullException.ThrowIfNull(history);
 
         _index = index;
         _launcher = launcher;
         _icons = icons;
+        _history = history;
         _uiContext = SynchronizationContext.Current;
 
         HintText = $"Enter 실행   ·   Ctrl+숫자 n+1번째 실행   ·   Esc 닫기   ·   {settings.GetHotkeyOrDefault()} 열기/닫기";
@@ -107,6 +110,11 @@ public partial class MainViewModel : ObservableObject
             StatusText = $"실행 실패: {ex.Message}";
             return false;
         }
+
+        // Remember the launch and the query that led to it; the file write happens off the UI thread.
+        var launchedId = result.Entry.Id;
+        var usedQuery = Query;
+        _ = Task.Run(() => _history.Record(launchedId, usedQuery));
 
         Query = string.Empty;
         LaunchSucceeded?.Invoke(this, EventArgs.Empty);

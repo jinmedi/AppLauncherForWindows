@@ -101,6 +101,39 @@ public class AppSearcherTests
     }
 
     [Fact]
+    public void Search_UsageBoost_LiftsFrequentlyUsedEntryAboveBetterTextMatch()
+    {
+        var betterMatch = Make("Visual Studio Code", "Code");       // "visual": prefix match
+        var frequent = Make("Paint Visual Tool", "mspaint");        // "visual": word-start match, weaker
+
+        var plain = AppSearcher.Search("visual", [frequent, betterMatch]);
+        var boosted = AppSearcher.Search("visual", [frequent, betterMatch], boost: e => e == frequent ? 300 : 0);
+
+        Assert.Same(betterMatch, plain[0].Entry);
+        Assert.Same(frequent, boosted[0].Entry);
+        Assert.Equal(300, boosted[0].Boost);
+        Assert.Equal(boosted[0].Score - 300, boosted[0].MatchScore);
+    }
+
+    [Fact]
+    public void Search_UsageBoost_DoesNotResurrectNonMatches()
+    {
+        var results = AppSearcher.Search("kakao", All, boost: _ => 1000);
+
+        Assert.Single(results);
+        Assert.Same(KakaoTalk, results[0].Entry);
+    }
+
+    [Fact]
+    public void Search_NegativeBoost_IsIgnored()
+    {
+        var results = AppSearcher.Search("kakao", All, boost: _ => -500);
+
+        Assert.Equal(0, results[0].Boost);
+        Assert.Equal(results[0].MatchScore, results[0].Score);
+    }
+
+    [Fact]
     public void Search_FolderWithBetterScore_StillWins()
     {
         var folder = new AppEntry { Id = "folder:x", Name = "Invoices", LaunchPath = @"C:\Users\me\Invoices", Source = AppSource.Folder };

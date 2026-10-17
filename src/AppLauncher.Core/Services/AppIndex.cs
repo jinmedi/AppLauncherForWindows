@@ -12,12 +12,14 @@ public sealed record SourceReport(string Source, int Count, TimeSpan Elapsed, st
 public sealed class AppIndex
 {
     private readonly IReadOnlyList<IAppSource> _sources;
+    private readonly UsageHistory? _history;
     private IReadOnlyList<AppEntry> _entries = [];
 
-    public AppIndex(IEnumerable<IAppSource> sources)
+    public AppIndex(IEnumerable<IAppSource> sources, UsageHistory? history = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         _sources = sources.ToArray();
+        _history = history;
     }
 
     public IReadOnlyList<AppEntry> Entries => Volatile.Read(ref _entries);
@@ -62,8 +64,9 @@ public sealed class AppIndex
         Refreshed?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Matches are boosted by usage history when one was supplied, so frequently launched items rank first.</summary>
     public IReadOnlyList<SearchResult> Search(string? query, int maxResults = 8) =>
-        AppSearcher.Search(query, Entries, maxResults);
+        AppSearcher.Search(query, Entries, maxResults, _history is null ? null : entry => _history.BoostFor(entry.Id, query));
 
     private static async Task<(IReadOnlyList<AppEntry> Entries, SourceReport Report)> ScanSourceAsync(IAppSource source, CancellationToken cancellationToken)
     {
