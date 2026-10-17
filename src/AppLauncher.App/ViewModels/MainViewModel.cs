@@ -37,7 +37,7 @@ public partial class MainViewModel : ObservableObject
         _icons = icons;
         _uiContext = SynchronizationContext.Current;
 
-        HintText = $"Enter 실행   ·   Esc 닫기   ·   {settings.GetHotkeyOrDefault()} 열기/닫기";
+        HintText = $"Enter 실행   ·   Ctrl+숫자 n+1번째 실행   ·   Esc 닫기   ·   {settings.GetHotkeyOrDefault()} 열기/닫기";
         _index.Refreshed += (_, _) => RunOnUiThread(OnIndexRefreshed);
         UpdateStatus();
     }
@@ -75,6 +75,25 @@ public partial class MainViewModel : ObservableObject
         return Launch(SelectedResult);
     }
 
+    /// <summary>
+    /// Launches the result at <paramref name="index"/> (0-based). Enter covers index 0 (the selected row),
+    /// so Ctrl+1 maps to index 1, Ctrl+2 to index 2, and so on. Out-of-range indexes do nothing.
+    /// </summary>
+    public bool LaunchAt(int index)
+    {
+        if (index < 0 || index >= Results.Count)
+        {
+            return false;
+        }
+
+        return Launch(Results[index]);
+    }
+
+    /// <summary>Highest Ctrl+digit that is meaningful: Ctrl+1 through Ctrl+(MaxResults - 1).</summary>
+    public static int MaxShortcutDigit => MaxResults - 1;
+
+    private static string ShortcutHintFor(int index) => index == 0 ? "Enter" : $"Ctrl+{index}";
+
     public bool Launch(SearchResultViewModel result)
     {
         ArgumentNullException.ThrowIfNull(result);
@@ -103,7 +122,7 @@ public partial class MainViewModel : ObservableObject
         Results.Clear();
         foreach (var match in matches)
         {
-            Results.Add(new SearchResultViewModel(match.Entry, _icons));
+            Results.Add(new SearchResultViewModel(match.Entry, _icons) { ShortcutHint = ShortcutHintFor(Results.Count) });
         }
 
         SelectedResult = Results.Count > 0 ? Results[0] : null;

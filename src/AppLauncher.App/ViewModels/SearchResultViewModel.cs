@@ -10,6 +10,10 @@ public partial class SearchResultViewModel : ObservableObject
     [ObservableProperty]
     private ImageSource? _icon;
 
+    /// <summary>Key that launches this row: "Enter" for the first result, "Ctrl+1" for the second, and so on.</summary>
+    [ObservableProperty]
+    private string _shortcutHint = string.Empty;
+
     public SearchResultViewModel(AppEntry entry, IconExtractor icons)
     {
         ArgumentNullException.ThrowIfNull(entry);

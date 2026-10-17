@@ -51,6 +51,15 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // Ctrl+1 launches the second result, Ctrl+2 the third, ... (Enter already covers the first).
+        if (Keyboard.Modifiers == ModifierKeys.Control && TryGetDigit(e.Key, out var digit)
+            && digit >= 1 && digit <= MainViewModel.MaxShortcutDigit)
+        {
+            _viewModel.LaunchAt(digit);
+            e.Handled = true;
+            return;
+        }
+
         switch (e.Key)
         {
             case Key.Escape:
@@ -73,6 +82,17 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
         }
+    }
+
+    private static bool TryGetDigit(Key key, out int digit)
+    {
+        digit = key switch
+        {
+            >= Key.D0 and <= Key.D9 => key - Key.D0,
+            >= Key.NumPad0 and <= Key.NumPad9 => key - Key.NumPad0,
+            _ => -1,
+        };
+        return digit >= 0;
     }
 
     private void OnResultsSelectionChanged(object sender, SelectionChangedEventArgs e)
