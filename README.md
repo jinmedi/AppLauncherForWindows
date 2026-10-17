@@ -103,20 +103,24 @@ git push origin v0.1.0
 {
   "Hotkey": "Alt+Space",
   "StartWithWindows": false,
-  "FolderRoots": [
-    "C:\\Users\\<이름>\\Desktop",
-    "C:\\Users\\<이름>\\Documents",
-    "C:\\Users\\<이름>\\Downloads",
-    "C:\\Users\\<이름>"
-  ],
+  "IncludeKnownFolders": true,
+  "IncludeCloudDrives": true,
+  "FolderRoots": [],
   "FolderScanDepth": 2
 }
 ```
 
 - `Hotkey`: 예 `"Ctrl+Shift+Space"`, `"Win+K"`
-- `FolderRoots`: 인덱싱할 폴더. `%USERPROFILE%` 같은 환경 변수를 쓸 수 있고, 빈 배열이면 폴더 검색을 끕니다
+- `IncludeKnownFolders`: 바탕 화면, 문서, 다운로드, 사진, 동영상, 음악, 사용자 홈 폴더
+- `IncludeCloudDrives`: 실행할 때마다 자동 감지합니다. OneDrive(개인·회사, 환경 변수 기준), Google Drive(스트리밍 모드의 가상 드라이브 `G:\내 드라이브`, `공유 드라이브` 등과 미러 모드 폴더), Dropbox(`info.json` 기준), iCloud Drive
+- `FolderRoots`: 위에 더해 인덱싱할 폴더. `%USERPROFILE%` 같은 환경 변수를 쓸 수 있습니다. 두 플래그를 끄고 여기만 채우면 원하는 폴더만 검색됩니다
 - `FolderScanDepth`: 각 루트 아래로 몇 단계까지 내려갈지. `0`이면 루트만
-- 숨김·시스템 폴더, `.`으로 시작하는 폴더, `AppData`, `node_modules`, `bin`, `obj`는 건너뜁니다. 필요하면 루트에 직접 추가하세요
+- 숨김·시스템 폴더, `.`으로 시작하는 폴더, 심볼릭 링크·정션, `AppData`, `node_modules`, `bin`, `obj`는 건너뜁니다. 필요하면 `FolderRoots`에 직접 추가하세요
+- 폴더 이름은 한글·영문 양쪽으로 검색됩니다. 예: "다운로드"/"Downloads", "내 드라이브"/"My Drive"/"구글 드라이브"
+
+### 폴더가 안 보일 때
+
+인덱싱이 끝날 때마다 `%APPDATA%\AppLauncherForWindows\index.log`가 다시 쓰입니다. 어떤 루트가 사용됐는지, 각 소스가 몇 개를 읽었는지, 실패했다면 어떤 오류였는지 적혀 있습니다. 찾는 폴더의 상위가 루트 목록에 없으면 `FolderRoots`에 추가하고, 너무 깊이 있으면 `FolderScanDepth`를 올리세요. 소스가 실패하면 런처 하단에 "일부 읽기 실패"가 표시됩니다.
 
 ## 로드맵
 
