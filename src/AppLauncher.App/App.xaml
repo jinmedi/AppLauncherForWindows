@@ -8,5 +8,7 @@
         <SolidColorBrush x:Key="Launcher.BorderBrush" Color="#33FFFFFF" />
         <SolidColorBrush x:Key="Launcher.TextBrush" Color="#FFF3F3F3" />
         <SolidColorBrush x:Key="Launcher.MutedTextBrush" Color="#99F3F3F3" />
+        <SolidColorBrush x:Key="Launcher.SelectionBrush" Color="#33FFFFFF" />
+        <SolidColorBrush x:Key="Launcher.HoverBrush" Color="#14FFFFFF" />
     </Application.Resources>
 </Application>

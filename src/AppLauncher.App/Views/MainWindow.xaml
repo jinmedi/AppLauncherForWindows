@@ -24,11 +24,39 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <Style x:Key="ResultItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Launcher.HoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Launcher.SelectionBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <EventSetter Event="PreviewMouseLeftButtonUp" Handler="OnResultClicked" />
+        </Style>
     </Window.Resources>
 
     <!-- Outer margin leaves room for the drop shadow inside the transparent window. -->
     <Border Margin="24"
-            Padding="20,18"
+            Padding="20,18,20,14"
             CornerRadius="14"
             Background="{DynamicResource Launcher.SurfaceBrush}"
             BorderBrush="{DynamicResource Launcher.BorderBrush}"
@@ -56,11 +84,58 @@
                            Visibility="{Binding IsQueryEmpty, Converter={StaticResource BoolToVisibility}}" />
             </Grid>
 
-            <Rectangle Height="1" Margin="0,14,0,10" Fill="{DynamicResource Launcher.BorderBrush}" />
+            <ListBox x:Name="ResultsList"
+                     ItemsSource="{Binding Results}"
+                     SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
+                     ItemContainerStyle="{StaticResource ResultItemStyle}"
+                     Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}"
+                     Margin="-10,12,-10,0"
+                     MaxHeight="460"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Focusable="False"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     SelectionChanged="OnResultsSelectionChanged">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:SearchResultViewModel}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Image Source="{Binding Icon}"
+                                   Width="28" Height="28"
+                                   VerticalAlignment="Center"
+                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                            <StackPanel Grid.Column="1" Margin="4,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}"
+                                           FontSize="15"
+                                           Foreground="{DynamicResource Launcher.TextBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Detail}"
+                                           FontSize="11"
+                                           Margin="0,1,0,0"
+                                           Foreground="{DynamicResource Launcher.MutedTextBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
-            <TextBlock Text="{Binding HintText}"
-                       FontSize="12"
-                       Foreground="{DynamicResource Launcher.MutedTextBrush}" />
+            <Rectangle Height="1" Margin="0,12,0,8" Fill="{DynamicResource Launcher.BorderBrush}" />
+
+            <Grid>
+                <TextBlock Text="{Binding StatusText}"
+                           FontSize="12"
+                           HorizontalAlignment="Left"
+                           Foreground="{DynamicResource Launcher.MutedTextBrush}" />
+                <TextBlock Text="{Binding HintText}"
+                           FontSize="12"
+                           HorizontalAlignment="Right"
+                           Foreground="{DynamicResource Launcher.MutedTextBrush}" />
+            </Grid>
         </StackPanel>
     </Border>
 </Window>

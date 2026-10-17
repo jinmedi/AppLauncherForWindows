@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using AppLauncher.App.Interop;
 using AppLauncher.App.ViewModels;
+using AppLauncher.Core.Indexing;
 using AppLauncher.Core.Models;
 using AppLauncher.Core.Services;
 using H.NotifyIcon;
@@ -43,6 +45,9 @@ public partial class App : Application
         RegisterHotkey(settings.GetHotkeyOrDefault());
         CreateTrayIcon();
 
+        // Index in the background; the window shows "reading apps..." until it finishes.
+        _ = RefreshIndexAsync(_services.GetRequiredService<AppIndex>());
+
         // Show once on first launch so the user sees something happened.
         _window.ShowLauncher();
     }
@@ -68,10 +73,32 @@ public partial class App : Application
 
         services.AddSingleton(new SettingsStore(SettingsStore.DefaultPath));
         services.AddSingleton(sp => sp.GetRequiredService<SettingsStore>().Load());
+
+        services.AddSingleton<IShellLinkResolver, ShellLinkResolver>();
+        // Factory so DI does not try to satisfy the optional IEnumerable<string> roots parameter.
+        services.AddSingleton<IAppSource>(sp => new StartMenuScanner(sp.GetRequiredService<IShellLinkResolver>()));
+        services.AddSingleton<AppIndex>();
+        services.AddSingleton<IAppLauncher, ShellAppLauncher>();
+        services.AddSingleton<IconExtractor>();
+
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<Views.MainWindow>();
 
         return services.BuildServiceProvider();
+    }
+
+    private static async Task RefreshIndexAsync(AppIndex index)
+    {
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            await index.RefreshAsync();
+            Trace.WriteLine($"[AppLauncher] indexed {index.Count} apps in {stopwatch.ElapsedMilliseconds} ms");
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"[AppLauncher] index refresh failed: {ex}");
+        }
     }
 
     private void RegisterHotkey(HotkeySpec spec)
