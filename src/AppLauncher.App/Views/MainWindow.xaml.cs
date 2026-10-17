@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using AppLauncher.App.ViewModels;
 
@@ -7,10 +8,16 @@ namespace AppLauncher.App.Views;
 
 public partial class MainWindow : Window
 {
+    private readonly MainViewModel _viewModel;
+
     public MainWindow(MainViewModel viewModel)
     {
+        ArgumentNullException.ThrowIfNull(viewModel);
+
         InitializeComponent();
+        _viewModel = viewModel;
         DataContext = viewModel;
+        _viewModel.LaunchSucceeded += (_, _) => HideLauncher();
     }
 
     /// <summary>Shows the launcher centred near the top of the primary work area and focuses the query box.</summary>
@@ -44,9 +51,43 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape)
+        switch (e.Key)
         {
-            HideLauncher();
+            case Key.Escape:
+                HideLauncher();
+                e.Handled = true;
+                break;
+
+            case Key.Down:
+                _viewModel.MoveSelection(+1);
+                e.Handled = true;
+                break;
+
+            case Key.Up:
+                _viewModel.MoveSelection(-1);
+                e.Handled = true;
+                break;
+
+            case Key.Enter:
+                _viewModel.LaunchSelected();
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void OnResultsSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ResultsList.SelectedItem is { } selected)
+        {
+            ResultsList.ScrollIntoView(selected);
+        }
+    }
+
+    private void OnResultClicked(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is ListBoxItem { DataContext: SearchResultViewModel result })
+        {
+            _viewModel.Launch(result);
             e.Handled = true;
         }
     }

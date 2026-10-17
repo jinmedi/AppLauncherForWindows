@@ -1,21 +1,140 @@
+using System.Collections.ObjectModel;
+using AppLauncher.App.Interop;
 using AppLauncher.Core.Models;
+using AppLauncher.Core.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AppLauncher.App.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    private const int MaxResults = 8;
+
+    private readonly AppIndex _index;
+    private readonly IAppLauncher _launcher;
+    private readonly IconExtractor _icons;
+    private readonly SynchronizationContext? _uiContext;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsQueryEmpty))]
     private string _query = string.Empty;
 
-    public MainViewModel(LauncherSettings settings)
+    [ObservableProperty]
+    private SearchResultViewModel? _selectedResult;
+
+    [ObservableProperty]
+    private string _statusText = string.Empty;
+
+    public MainViewModel(LauncherSettings settings, AppIndex index, IAppLauncher launcher, IconExtractor icons)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        HintText = $"Esc 닫기   ·   {settings.GetHotkeyOrDefault()} 열기/닫기";
+        ArgumentNullException.ThrowIfNull(index);
+        ArgumentNullException.ThrowIfNull(launcher);
+        ArgumentNullException.ThrowIfNull(icons);
+
+        _index = index;
+        _launcher = launcher;
+        _icons = icons;
+        _uiContext = SynchronizationContext.Current;
+
+        HintText = $"Enter 실행   ·   Esc 닫기   ·   {settings.GetHotkeyOrDefault()} 열기/닫기";
+        _index.Refreshed += (_, _) => RunOnUiThread(OnIndexRefreshed);
+        UpdateStatus();
     }
+
+    public ObservableCollection<SearchResultViewModel> Results { get; } = [];
 
     public bool IsQueryEmpty => string.IsNullOrEmpty(Query);
 
+    public bool HasResults => Results.Count > 0;
+
     public string HintText { get; }
+
+    /// <summary>Raised after an app was started so the window can hide itself.</summary>
+    public event EventHandler? LaunchSucceeded;
+
+    public void MoveSelection(int delta)
+    {
+        if (Results.Count == 0)
+        {
+            return;
+        }
+
+        var current = SelectedResult is null ? -1 : Results.IndexOf(SelectedResult);
+        var next = current < 0 ? 0 : (current + delta + Results.Count) % Results.Count;
+        SelectedResult = Results[next];
+    }
+
+    public bool LaunchSelected()
+    {
+        if (SelectedResult is null)
+        {
+            return false;
+        }
+
+        return Launch(SelectedResult);
+    }
+
+    public bool Launch(SearchResultViewModel result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        try
+        {
+            _launcher.Launch(result.Entry);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"실행 실패: {ex.Message}";
+            return false;
+        }
+
+        Query = string.Empty;
+        LaunchSucceeded?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    partial void OnQueryChanged(string value) => UpdateResults();
+
+    private void UpdateResults()
+    {
+        var matches = _index.Search(Query, MaxResults);
+
+        Results.Clear();
+        foreach (var match in matches)
+        {
+            Results.Add(new SearchResultViewModel(match.Entry, _icons));
+        }
+
+        SelectedResult = Results.Count > 0 ? Results[0] : null;
+        OnPropertyChanged(nameof(HasResults));
+    }
+
+    private void OnIndexRefreshed()
+    {
+        UpdateStatus();
+        if (!IsQueryEmpty)
+        {
+            UpdateResults();
+        }
+    }
+
+    private void UpdateStatus()
+    {
+        StatusText = _index.IsRefreshing || _index.Count == 0
+            ? "앱 목록을 읽는 중..."
+            : $"앱 {_index.Count}개";
+    }
+
+    private void RunOnUiThread(Action action)
+    {
+        if (_uiContext is null || SynchronizationContext.Current == _uiContext)
+        {
+            action();
+        }
+        else
+        {
+            _uiContext.Post(_ => action(), null);
+        }
+    }
 }
