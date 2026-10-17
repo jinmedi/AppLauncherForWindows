@@ -53,9 +53,7 @@ public final class AppIndex: @unchecked Sendable {
 
     /// Scans every source concurrently. A source that throws is reported in `lastReport` and skipped; the others still load.
     public func refresh() async {
-        lock.lock()
-        refreshing = true
-        lock.unlock()
+        setRefreshing(true)
 
         let sources = self.sources
         let results = await withTaskGroup(of: (Int, [AppEntry], SourceReport).self) { group in
@@ -81,15 +79,24 @@ public final class AppIndex: @unchecked Sendable {
             }
         }
 
-        lock.lock()
-        storedEntries = merged
-        storedReport = results.map { $0.2 }
-        refreshing = false
-        lock.unlock()
+        store(entries: merged, report: results.map { $0.2 })
 
         if let onRefreshed {
             DispatchQueue.main.async { onRefreshed() }
         }
+    }
+
+    // NSLock must not be taken directly from an async context; these synchronous helpers scope it.
+    private func setRefreshing(_ value: Bool) {
+        lock.lock(); defer { lock.unlock() }
+        refreshing = value
+    }
+
+    private func store(entries: [AppEntry], report: [SourceReport]) {
+        lock.lock(); defer { lock.unlock() }
+        storedEntries = entries
+        storedReport = report
+        refreshing = false
     }
 
     /// Matches are boosted by usage history when one was supplied, so frequently launched items rank first.
