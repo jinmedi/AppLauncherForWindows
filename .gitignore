@@ -491,3 +491,9 @@ $RECYCLE.BIN/
 # dotnet gitignore template ignores *.app (macOS bundles); on case-insensitive Windows
 # that swallows the AppLauncher.App project folder, so re-include it explicitly.
 !src/AppLauncher.App/
+
+# macOS launcher (Swift package)
+mac/.build/
+mac/build/
+mac/*.zip
+mac/.swiftpm/

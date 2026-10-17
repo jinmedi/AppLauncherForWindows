@@ -2,6 +2,8 @@
 
 Windows용 경량 앱 런처입니다. 전역 단축키(기본 `Alt+Space`)로 검색창을 띄우고, 설치된 앱을 빠르게 찾아 실행하는 것을 목표로 합니다.
 
+같은 기능의 **macOS용 런처**는 [`mac/`](mac/README.md)에 있습니다 (Swift + AppKit, 기본 단축키 `⌥Space`, 릴리스마다 `AppLauncher-vX.Y.Z-mac-universal.zip`이 함께 첨부됩니다).
+
 ## 현재 상태
 
 2단계 + 폴더. 시작 메뉴(사용자 + 공용)의 바로가기와 주요 폴더를 인덱싱하고, 퍼지 검색으로 찾아 Enter로 실행하거나 Explorer로 엽니다.
@@ -20,6 +22,7 @@ Windows용 경량 앱 런처입니다. 전역 단축키(기본 `Alt+Space`)로 �
 
 ```
 AppLauncherForWindows.sln
+mac/                               macOS용 런처 (Swift 패키지, 자세한 내용은 mac/README.md)
 Directory.Build.props              공통 빌드 설정 (Nullable, ImplicitUsings 등)
 src/
   AppLauncher.App/                 WPF 실행 프로젝트 (UI 전용)
@@ -86,7 +89,8 @@ dotnet publish src/AppLauncher.App -c Release -r win-x64 --self-contained true -
 ## CI와 릴리스
 
 - **CI** (`.github/workflows/ci.yml`): PR과 main 푸시마다 빌드(경고를 오류로 처리), 테스트, publish까지 돌리고 exe를 워크플로 아티팩트로 14일간 보관합니다.
-- **Release** (`.github/workflows/release.yml`): `v*` 태그를 푸시하면 태그 버전으로 빌드·테스트·publish한 뒤 GitHub Release를 만들고 exe와 `.sha256`을 첨부합니다. `v0.2.0-beta.1`처럼 하이픈이 있으면 pre-release로 표시됩니다.
+- **CI (macOS)** (`.github/workflows/ci-mac.yml`): 같은 트리거로 `macos-15` 러너에서 `mac/`의 Swift 패키지를 빌드·테스트하고 `.app` zip을 아티팩트로 보관합니다.
+- **Release** (`.github/workflows/release.yml`): `v*` 태그를 푸시하면 태그 버전으로 빌드·테스트·publish한 뒤 GitHub Release를 만들고 exe와 `.sha256`을 첨부합니다. 이어서 `release-mac` 잡이 macOS 유니버설 `.app` zip과 `.sha256`을 같은 릴리스에 추가합니다. `v0.2.0-beta.1`처럼 하이픈이 있으면 pre-release로 표시됩니다.
 
 릴리스 절차:
 

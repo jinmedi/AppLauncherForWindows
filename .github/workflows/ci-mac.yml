@@ -1,0 +1,44 @@
+name: CI (macOS)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-mac-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build, test, bundle
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: mac
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: swift test
+
+      # Same bundle step the release workflow uses, so a broken bundle shows up in the PR, not at tag time.
+      - name: Build .app bundle
+        run: Scripts/build-app.sh 0.0.0-ci
+
+      - name: Zip bundle
+        run: ditto -c -k --keepParent build/AppLauncher.app AppLauncher-mac.zip
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppLauncher-mac-universal-${{ github.sha }}
+          path: mac/AppLauncher-mac.zip
+          retention-days: 14

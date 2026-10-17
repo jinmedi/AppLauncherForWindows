@@ -68,3 +68,40 @@ jobs:
         run: >
           gh release create "$TAG" "publish/$ASSET" "publish/$ASSET.sha256"
           --title "AppLauncher $TAG" --generate-notes $PRERELEASE
+
+  release-mac:
+    name: Build and attach macOS app
+    needs: release
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: mac
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          {
+            echo "TAG=$TAG"
+            echo "VERSION=${TAG#v}"
+            echo "ASSET=AppLauncher-$TAG-mac-universal.zip"
+          } >> "$GITHUB_ENV"
+
+      - name: Test
+        run: swift test
+
+      - name: Build .app bundle (universal)
+        run: Scripts/build-app.sh "$VERSION"
+
+      - name: Zip and write checksum
+        run: |
+          ditto -c -k --keepParent build/AppLauncher.app "$ASSET"
+          shasum -a 256 "$ASSET" > "$ASSET.sha256"
+          cat "$ASSET.sha256"
+
+      - name: Attach to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" "$ASSET" "$ASSET.sha256" --clobber
