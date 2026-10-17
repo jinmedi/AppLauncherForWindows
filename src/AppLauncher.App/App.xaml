@@ -1,0 +1,12 @@
+<Application x:Class="AppLauncher.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <!-- Dark surface by default; theme switching comes in a later step. -->
+        <SolidColorBrush x:Key="Launcher.SurfaceBrush" Color="#F2202124" />
+        <SolidColorBrush x:Key="Launcher.BorderBrush" Color="#33FFFFFF" />
+        <SolidColorBrush x:Key="Launcher.TextBrush" Color="#FFF3F3F3" />
+        <SolidColorBrush x:Key="Launcher.MutedTextBrush" Color="#99F3F3F3" />
+    </Application.Resources>
+</Application>
