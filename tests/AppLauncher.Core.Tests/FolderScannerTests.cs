@@ -50,6 +50,40 @@ public sealed class FolderScannerTests : IDisposable
     }
 
     [Fact]
+    public void Scan_SkipsSymbolicLinksButKeepsOrdinaryFolders()
+    {
+        var root = MakeDir("Links");
+        var target = MakeDir("Elsewhere");
+        MakeDir("Links", "Real");
+
+        try
+        {
+            Directory.CreateSymbolicLink(Path.Combine(root, "Linked"), target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return; // Creating symlinks needs Developer Mode or elevation; nothing to verify without one.
+        }
+
+        var names = new FolderScanner([root]).Scan().Select(e => e.Name).ToList();
+
+        Assert.Equal(["Links", "Real"], names);
+    }
+
+    [Fact]
+    public void Scan_AddsBothLanguagesAsKeywordsForCloudAndKnownRoots()
+    {
+        var myDrive = MakeDir("내 드라이브");
+        var desktopKo = MakeDir("바탕 화면");
+
+        var entries = new FolderScanner([myDrive, desktopKo], maxDepth: 0).Scan();
+
+        Assert.Contains("My Drive", entries[0].Keywords);
+        Assert.Contains("구글 드라이브", entries[0].Keywords);
+        Assert.Contains("Desktop", entries[1].Keywords);
+    }
+
+    [Fact]
     public void Scan_ProducesFolderEntriesThatOpenThePathItself()
     {
         var root = MakeDir("Docs");
@@ -103,6 +137,20 @@ public sealed class FolderScannerTests : IDisposable
         var entries = new FolderScanner([root, child]).Scan();
 
         Assert.Equal(2, entries.Count);
+    }
+
+    [Fact]
+    public void Scan_MergesRootKeywords_WhenRootWasAlreadySeenAsChild()
+    {
+        var profile = MakeDir("profile");
+        var oneDrive = MakeDir("profile", "OneDrive - Work");
+
+        // Profile first, so OneDrive is first met as a child (keyword "profile"), then again as a root.
+        var entries = new FolderScanner([profile, oneDrive]).Scan();
+
+        var entry = Assert.Single(entries, e => e.Name == "OneDrive - Work");
+        Assert.Contains("profile", entry.Keywords);
+        Assert.Contains("원드라이브", entry.Keywords);
     }
 
     [Fact]

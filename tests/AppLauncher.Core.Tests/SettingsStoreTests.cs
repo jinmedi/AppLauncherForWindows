@@ -18,7 +18,9 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.Equal("Alt+Space", settings.Hotkey);
         Assert.False(settings.StartWithWindows);
-        Assert.NotEmpty(settings.FolderRoots);
+        Assert.True(settings.IncludeKnownFolders);
+        Assert.True(settings.IncludeCloudDrives);
+        Assert.Empty(settings.FolderRoots);
         Assert.Equal(2, settings.FolderScanDepth);
     }
 
@@ -55,8 +57,25 @@ public sealed class SettingsStoreTests : IDisposable
 
         var settings = new SettingsStore(SettingsPath).Load();
 
-        Assert.NotEmpty(settings.FolderRoots);
+        Assert.True(settings.IncludeKnownFolders);
+        Assert.True(settings.IncludeCloudDrives);
+        Assert.Empty(settings.FolderRoots);
         Assert.Equal(2, settings.FolderScanDepth);
+    }
+
+    [Fact]
+    public void Load_KeepsFolderRootsFromV010Files_AndTurnsOnDetectionByDefault()
+    {
+        // v0.1.0 wrote the seven known folders into FolderRoots. They stay as user roots (deduplicated
+        // later by FolderRootResolver) and the new detection flags default to on, so cloud drives appear
+        // on upgrade without editing the file.
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(SettingsPath, """{ "Hotkey": "Alt+Space", "FolderRoots": ["C:\\Users\\me\\Downloads"], "FolderScanDepth": 2 }""");
+
+        var settings = new SettingsStore(SettingsPath).Load();
+
+        Assert.Equal([@"C:\Users\me\Downloads"], settings.FolderRoots);
+        Assert.True(settings.IncludeCloudDrives);
     }
 
     [Fact]

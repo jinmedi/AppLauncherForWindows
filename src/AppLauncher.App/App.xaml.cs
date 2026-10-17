@@ -49,7 +49,7 @@ public partial class App : Application
         CreateTrayIcon();
 
         // Index in the background; the window shows "reading apps..." until it finishes.
-        _ = RefreshIndexAsync(_services.GetRequiredService<AppIndex>());
+        _ = RefreshIndexAsync(_services.GetRequiredService<AppIndex>(), _services.GetServices<IAppSource>());
 
         // Show once on first launch so the user sees something happened.
         _window.ShowLauncher();
@@ -83,7 +83,7 @@ public partial class App : Application
         services.AddSingleton<IAppSource>(sp =>
         {
             var settings = sp.GetRequiredService<LauncherSettings>();
-            return new FolderScanner(settings.FolderRoots, settings.FolderScanDepth);
+            return new FolderScanner(FolderRootResolver.Resolve(settings), settings.FolderScanDepth);
         });
         services.AddSingleton<AppIndex>();
         services.AddSingleton<IAppLauncher, ShellAppLauncher>();
@@ -113,17 +113,59 @@ public partial class App : Application
         }
     }
 
-    private static async Task RefreshIndexAsync(AppIndex index)
+    private static async Task RefreshIndexAsync(AppIndex index, IEnumerable<IAppSource> sources)
     {
         try
         {
             var stopwatch = Stopwatch.StartNew();
             await index.RefreshAsync();
-            Trace.WriteLine($"[AppLauncher] indexed {index.Count} apps in {stopwatch.ElapsedMilliseconds} ms");
+            Trace.WriteLine($"[AppLauncher] indexed {index.Count} entries in {stopwatch.ElapsedMilliseconds} ms");
+            WriteIndexLog(index, sources);
         }
         catch (Exception ex)
         {
             Trace.WriteLine($"[AppLauncher] index refresh failed: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// %APPDATA%\AppLauncherForWindows\index.log, rewritten after every refresh: which folder roots were
+    /// used and what each source contributed. This is what to look at when "my folder is not found".
+    /// </summary>
+    private static void WriteIndexLog(AppIndex index, IEnumerable<IAppSource> sources)
+    {
+        try
+        {
+            var lines = new List<string>
+            {
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}  {index.Count} entries",
+                string.Empty,
+                "[sources]",
+            };
+
+            foreach (var report in index.LastReport)
+            {
+                var status = report.Error is null ? $"{report.Count} entries" : $"FAILED: {report.Error}";
+                lines.Add($"  {report.Source}: {status} ({report.Elapsed.TotalMilliseconds:F0} ms)");
+            }
+
+            foreach (var scanner in sources.OfType<FolderScanner>())
+            {
+                lines.Add(string.Empty);
+                lines.Add("[folder roots]");
+                foreach (var root in scanner.Roots)
+                {
+                    lines.Add($"  {root}  {(Directory.Exists(root) ? string.Empty : "(missing)")}".TrimEnd());
+                }
+            }
+
+            var path = Path.Combine(Path.GetDirectoryName(SettingsStore.DefaultPath)!, "index.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllLines(path, lines);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Trace.WriteLine($"[AppLauncher] could not write index.log: {ex.Message}");
         }
     }
 

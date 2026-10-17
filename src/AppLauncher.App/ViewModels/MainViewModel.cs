@@ -129,7 +129,13 @@ public partial class MainViewModel : ObservableObject
 
         var folders = _index.Entries.Count(e => e.Source == AppSource.Folder);
         var apps = _index.Count - folders;
-        StatusText = folders > 0 ? $"앱 {apps}개   ·   폴더 {folders}개" : $"앱 {apps}개";
+        var status = folders > 0 ? $"앱 {apps}개   ·   폴더 {folders}개" : $"앱 {apps}개";
+        if (_index.HasErrors)
+        {
+            status += "   ·   일부 읽기 실패 (index.log 확인)";
+        }
+
+        StatusText = status;
     }
 
     private void RunOnUiThread(Action action)
