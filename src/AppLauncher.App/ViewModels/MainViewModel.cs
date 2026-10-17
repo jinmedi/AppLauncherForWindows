@@ -121,9 +121,15 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateStatus()
     {
-        StatusText = _index.IsRefreshing || _index.Count == 0
-            ? "앱 목록을 읽는 중..."
-            : $"앱 {_index.Count}개";
+        if (_index.IsRefreshing || _index.Count == 0)
+        {
+            StatusText = "앱 목록을 읽는 중...";
+            return;
+        }
+
+        var folders = _index.Entries.Count(e => e.Source == AppSource.Folder);
+        var apps = _index.Count - folders;
+        StatusText = folders > 0 ? $"앱 {apps}개   ·   폴더 {folders}개" : $"앱 {apps}개";
     }
 
     private void RunOnUiThread(Action action)

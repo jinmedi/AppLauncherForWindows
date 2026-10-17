@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -39,6 +40,8 @@ public partial class App : Application
         _services = BuildServices();
 
         var settings = _services.GetRequiredService<LauncherSettings>();
+        WriteDefaultSettingsIfMissing(_services.GetRequiredService<SettingsStore>(), settings);
+
         _window = _services.GetRequiredService<Views.MainWindow>();
         MainWindow = _window;
 
@@ -75,8 +78,13 @@ public partial class App : Application
         services.AddSingleton(sp => sp.GetRequiredService<SettingsStore>().Load());
 
         services.AddSingleton<IShellLinkResolver, ShellLinkResolver>();
-        // Factory so DI does not try to satisfy the optional IEnumerable<string> roots parameter.
+        // Factories so DI does not try to satisfy the scanners' IEnumerable<string> roots parameters itself.
         services.AddSingleton<IAppSource>(sp => new StartMenuScanner(sp.GetRequiredService<IShellLinkResolver>()));
+        services.AddSingleton<IAppSource>(sp =>
+        {
+            var settings = sp.GetRequiredService<LauncherSettings>();
+            return new FolderScanner(settings.FolderRoots, settings.FolderScanDepth);
+        });
         services.AddSingleton<AppIndex>();
         services.AddSingleton<IAppLauncher, ShellAppLauncher>();
         services.AddSingleton<IconExtractor>();
@@ -85,6 +93,24 @@ public partial class App : Application
         services.AddSingleton<Views.MainWindow>();
 
         return services.BuildServiceProvider();
+    }
+
+    /// <summary>Writes the defaults on first run so the user has a file to edit (hotkey, folder roots).</summary>
+    private static void WriteDefaultSettingsIfMissing(SettingsStore store, LauncherSettings settings)
+    {
+        if (File.Exists(store.FilePath))
+        {
+            return;
+        }
+
+        try
+        {
+            store.Save(settings);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Trace.WriteLine($"[AppLauncher] could not write default settings: {ex.Message}");
+        }
     }
 
     private static async Task RefreshIndexAsync(AppIndex index)

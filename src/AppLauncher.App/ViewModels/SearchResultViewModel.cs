@@ -25,6 +25,8 @@ public partial class SearchResultViewModel : ObservableObject
 
     public string Detail => Entry.TargetPath ?? Entry.LaunchPath;
 
+    public string Kind => Entry.Source == AppSource.Folder ? "폴더" : "앱";
+
     private async Task LoadIconAsync(IconExtractor icons)
     {
         try
