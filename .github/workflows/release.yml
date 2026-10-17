@@ -1,0 +1,70 @@
+name: Release
+
+# Push a tag like v0.1.0 (or v0.2.0-beta.1 for a pre-release) to build and publish a GitHub Release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Derive version from tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not vMAJOR.MINOR.PATCH[-prerelease]"
+            exit 1
+          fi
+          PRERELEASE=""
+          [[ "$VERSION" == *-* ]] && PRERELEASE="--prerelease"
+          {
+            echo "TAG=$TAG"
+            echo "VERSION=$VERSION"
+            echo "PRERELEASE=$PRERELEASE"
+            echo "ASSET=AppLauncher-$TAG-win-x64.exe"
+          } >> "$GITHUB_ENV"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (warnings are errors)
+        run: dotnet build --no-restore -c Release -warnaserror -p:Version=${{ env.VERSION }}
+
+      - name: Test
+        run: dotnet test --no-build -c Release
+
+      - name: Publish self-contained single file
+        run: >
+          dotnet publish src/AppLauncher.App -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none
+          -p:Version=${{ env.VERSION }}
+          -o publish
+
+      - name: Rename asset and write checksum
+        shell: bash
+        run: |
+          mv publish/AppLauncher.exe "publish/$ASSET"
+          (cd publish && sha256sum "$ASSET" > "$ASSET.sha256")
+          cat "publish/$ASSET.sha256"
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$TAG" "publish/$ASSET" "publish/$ASSET.sha256"
+          --title "AppLauncher $TAG" --generate-notes $PRERELEASE
