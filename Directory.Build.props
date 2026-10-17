@@ -5,6 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
+    <!-- Local/dev builds. The release workflow overrides this with the pushed tag (v1.2.3 -> 1.2.3). -->
+    <Version>0.1.0</Version>
+    <Authors>jinmedi</Authors>
+    <Product>App Launcher for Windows</Product>
   </PropertyGroup>
 
 </Project>

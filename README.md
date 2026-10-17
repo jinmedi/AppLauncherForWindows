@@ -47,6 +47,15 @@ tests/
   AppLauncher.Core.Tests/          xUnit
 ```
 
+## 설치
+
+[Releases](https://github.com/jinmedi/AppLauncherForWindows/releases)에서 `AppLauncher-vX.Y.Z-win-x64.exe`를 내려받아 원하는 폴더(예: `C:\Tools\AppLauncher\`)에 두고 실행하면 됩니다. .NET 설치가 필요 없는 단독 실행 파일입니다.
+
+- 서명되지 않은 프로그램이라 첫 실행 때 SmartScreen 경고가 뜹니다. "추가 정보" → "실행"을 누르면 됩니다.
+- Windows 시작 시 자동 실행은 아직 앱에 없습니다. `Win+R` → `shell:startup` 폴더에 exe 바로가기를 넣으세요.
+- 업데이트는 exe만 덮어쓰면 됩니다. 설정은 `%APPDATA%`에 따로 있어 유지됩니다.
+- 옆에 있는 `.sha256` 파일로 내려받은 파일을 검증할 수 있습니다: `certutil -hashfile AppLauncher-vX.Y.Z-win-x64.exe SHA256`
+
 ## 빌드와 실행
 
 ```bash
@@ -62,6 +71,29 @@ dotnet run --project src/AppLauncher.App
 - `↑` `↓`: 선택 이동, `Enter` 또는 클릭: 앱 실행 또는 폴더 열기 후 창 숨김
 - `Esc` 또는 포커스 이탈: 창 숨김
 - 트레이 아이콘 왼쪽 클릭: 창 열기/닫기, 오른쪽 클릭: 메뉴(열기, 종료)
+
+### 직접 배포 파일 만들기
+
+```bash
+dotnet publish src/AppLauncher.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o publish/win-x64
+```
+
+`publish/win-x64/AppLauncher.exe` 하나가 나옵니다(약 146MB). `--self-contained false`로 바꾸면 25MB짜리가 나오지만 대상 PC에 .NET 9 Desktop Runtime이 있어야 합니다.
+
+## CI와 릴리스
+
+- **CI** (`.github/workflows/ci.yml`): PR과 main 푸시마다 빌드(경고를 오류로 처리), 테스트, publish까지 돌리고 exe를 워크플로 아티팩트로 14일간 보관합니다.
+- **Release** (`.github/workflows/release.yml`): `v*` 태그를 푸시하면 태그 버전으로 빌드·테스트·publish한 뒤 GitHub Release를 만들고 exe와 `.sha256`을 첨부합니다. `v0.2.0-beta.1`처럼 하이픈이 있으면 pre-release로 표시됩니다.
+
+릴리스 절차:
+
+```bash
+git tag v0.1.0
+```
+
+```bash
+git push origin v0.1.0
+```
 
 ## 설정
 
@@ -94,4 +126,4 @@ dotnet run --project src/AppLauncher.App
 3. 사용 빈도 랭킹, 실행 기록, 한글 초성 검색
 4. 자동 시작, 설정 화면
 5. 스토어 앱(UWP) 스캐너, 즐겨찾기, 라이트/다크 테마
-6. GitHub Actions 빌드와 릴리스
+6. ~~GitHub Actions 빌드와 릴리스~~
