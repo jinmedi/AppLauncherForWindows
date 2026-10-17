@@ -17,6 +17,13 @@ indent_size = 2
 [*.md]
 trim_trailing_whitespace = false
 
+# The macOS launcher is edited and built on Unix-like systems.
+[*.sh]
+end_of_line = lf
+
+[mac/**]
+end_of_line = lf
+
 [*.cs]
 csharp_style_namespace_declarations = file_scoped:warning
 csharp_style_var_for_built_in_types = true:suggestion
