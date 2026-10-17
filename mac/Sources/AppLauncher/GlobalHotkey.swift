@@ -3,8 +3,9 @@ import Carbon.HIToolbox
 import Foundation
 import LauncherCore
 
-/// System-wide hotkey through Carbon's `RegisterEventHotKey`. Unlike an NSEvent global monitor it needs
-/// no Accessibility permission and fires even while another app owns the keyboard.
+/// System-wide hotkey through Carbon's `RegisterEventHotKey`. Unlike an event tap it needs no Accessibility
+/// permission and fires even while another app owns the keyboard, but it cannot tell left from right
+/// modifier keys; `EventTapHotkey` covers those.
 final class GlobalHotkey {
     struct RegistrationError: Error, CustomStringConvertible {
         let message: String
@@ -40,7 +41,7 @@ final class GlobalHotkey {
         }
 
         let hotKeyID = EventHotKeyID(signature: Self.signature, id: 1)
-        let registerStatus = RegisterEventHotKey(keyCode, spec.modifiers.rawValue, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        let registerStatus = RegisterEventHotKey(keyCode, spec.modifiers.carbonModifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
         guard registerStatus == noErr else {
             if let handlerRef {
                 RemoveEventHandler(handlerRef)

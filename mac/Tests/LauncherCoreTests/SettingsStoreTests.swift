@@ -7,12 +7,22 @@ final class SettingsStoreTests: TemporaryDirectoryTestCase {
     func testLoad_ReturnsDefaults_WhenFileIsMissing() {
         let settings = SettingsStore(filePath: settingsPath).load()
 
-        XCTAssertEqual(settings.hotkey, "Option+Space")
+        XCTAssertEqual(settings.hotkey, "RightOption+Return")
         XCTAssertFalse(settings.startAtLogin)
         XCTAssertTrue(settings.includeKnownFolders)
         XCTAssertTrue(settings.includeCloudDrives)
         XCTAssertTrue(settings.folderRoots.isEmpty)
         XCTAssertEqual(settings.folderScanDepth, 2)
+        XCTAssertTrue(settings.forceEnglishInput)
+    }
+
+    func testForceEnglishInput_RoundTripsAndDefaultsToOn() throws {
+        let store = SettingsStore(filePath: settingsPath)
+        try store.save(LauncherSettings(forceEnglishInput: false))
+        XCTAssertFalse(store.load().forceEnglishInput)
+
+        writeFile(settingsPath, #"{ "Hotkey": "Cmd+Space" }"#)
+        XCTAssertTrue(store.load().forceEnglishInput)
     }
 
     func testSave_ThenLoad_RoundTripsFolderSettings() throws {
@@ -74,7 +84,7 @@ final class SettingsStoreTests: TemporaryDirectoryTestCase {
     func testLoad_ReturnsDefaults_WhenFileIsCorrupt() {
         writeFile(settingsPath, "{ not json")
 
-        XCTAssertEqual(SettingsStore(filePath: settingsPath).load().hotkey, "Option+Space")
+        XCTAssertEqual(SettingsStore(filePath: settingsPath).load().hotkey, "RightOption+Return")
     }
 
     func testHotkeyOrDefault_FallsBackWhenTextIsInvalid() {

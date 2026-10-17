@@ -1,7 +1,9 @@
 import Foundation
 
-/// Modifier flags for a global hotkey. Raw values match the Carbon `cmdKey`/`shiftKey`/`optionKey`/`controlKey`
-/// constants so they can be passed straight to `RegisterEventHotKey`.
+/// Modifier flags for a global hotkey. The low 16 bits match the Carbon `cmdKey`/`shiftKey`/`optionKey`/
+/// `controlKey` constants so they can be passed straight to `RegisterEventHotKey`. The side-specific flags
+/// (right Option, left Command, ...) are our own: Carbon cannot tell the two Option keys apart, so a spec
+/// that uses one of them is registered through a CGEvent tap instead (see `requiresEventTap`).
 public struct HotkeyModifiers: OptionSet, Hashable, Sendable {
     public let rawValue: UInt32
 
@@ -13,9 +15,30 @@ public struct HotkeyModifiers: OptionSet, Hashable, Sendable {
     public static let shift = HotkeyModifiers(rawValue: 0x0200)
     public static let option = HotkeyModifiers(rawValue: 0x0800)
     public static let control = HotkeyModifiers(rawValue: 0x1000)
+
+    public static let leftOption = HotkeyModifiers(rawValue: 0x1_0000)
+    public static let rightOption = HotkeyModifiers(rawValue: 0x2_0000)
+    public static let leftCommand = HotkeyModifiers(rawValue: 0x4_0000)
+    public static let rightCommand = HotkeyModifiers(rawValue: 0x8_0000)
+
+    static let sideSpecific: HotkeyModifiers = [.leftOption, .rightOption, .leftCommand, .rightCommand]
+
+    /// Either Option key, or a specific one.
+    public var wantsOption: Bool { !isDisjoint(with: [.option, .leftOption, .rightOption]) }
+
+    /// Either Command key, or a specific one.
+    public var wantsCommand: Bool { !isDisjoint(with: [.command, .leftCommand, .rightCommand]) }
+
+    /// What `RegisterEventHotKey` understands: side-specific keys collapse to their generic modifier.
+    public var carbonModifiers: UInt32 {
+        var value = rawValue & 0xFF00
+        if wantsOption { value |= HotkeyModifiers.option.rawValue }
+        if wantsCommand { value |= HotkeyModifiers.command.rawValue }
+        return value
+    }
 }
 
-/// A parsed hotkey such as "Option+Space" or "Cmd+Shift+K".
+/// A parsed hotkey such as "RightOption+Return" or "Cmd+Shift+K".
 /// The key is kept as a name so Core stays UI-agnostic; `carbonKeyCode` maps it for registration.
 public struct HotkeySpec: Hashable, Sendable, CustomStringConvertible {
     public let modifiers: HotkeyModifiers
@@ -26,12 +49,12 @@ public struct HotkeySpec: Hashable, Sendable, CustomStringConvertible {
         self.key = key
     }
 
-    /// Option+Space: Spotlight owns Cmd+Space, and Option+Space is what Alt+Space becomes on a Mac keyboard.
-    public static let `default` = HotkeySpec(modifiers: .option, key: "Space")
+    /// Right Option + Return: a two-key chord nothing else uses, reachable with the right hand alone.
+    public static let `default` = HotkeySpec(modifiers: .rightOption, key: "Return")
 
     public struct ParseError: Error, CustomStringConvertible {
         public let text: String
-        public var description: String { "'\(text)' is not a valid hotkey. Expected e.g. \"Option+Space\"." }
+        public var description: String { "'\(text)' is not a valid hotkey. Expected e.g. \"RightOption+Return\"." }
     }
 
     public static func parse(_ text: String) throws -> HotkeySpec {
@@ -70,50 +93,107 @@ public struct HotkeySpec: Hashable, Sendable, CustomStringConvertible {
         return HotkeySpec(modifiers: modifiers, key: normalizeKey(key))
     }
 
-    /// Settings-file form: "Ctrl+Option+Shift+Cmd+Key".
+    /// True when a left/right-specific modifier is used; Carbon cannot register those, a CGEvent tap can.
+    public var requiresEventTap: Bool {
+        !modifiers.isDisjoint(with: HotkeyModifiers.sideSpecific)
+    }
+
+    /// The same chord with side-specific modifiers collapsed to generic ones (the Carbon fallback).
+    public var genericEquivalent: HotkeySpec {
+        HotkeySpec(modifiers: HotkeyModifiers(rawValue: modifiers.carbonModifiers), key: key)
+    }
+
+    /// Settings-file form: "Ctrl+RightOption+Shift+Cmd+Key".
     public var description: String {
         var parts: [String] = []
         if modifiers.contains(.control) { parts.append("Ctrl") }
         if modifiers.contains(.option) { parts.append("Option") }
+        if modifiers.contains(.leftOption) { parts.append("LeftOption") }
+        if modifiers.contains(.rightOption) { parts.append("RightOption") }
         if modifiers.contains(.shift) { parts.append("Shift") }
         if modifiers.contains(.command) { parts.append("Cmd") }
+        if modifiers.contains(.leftCommand) { parts.append("LeftCmd") }
+        if modifiers.contains(.rightCommand) { parts.append("RightCmd") }
         parts.append(key)
         return parts.joined(separator: "+")
     }
 
-    /// On-screen form with Mac symbols: "⌥Space", "⌃⇧K".
+    /// On-screen form with Mac symbols: "오른쪽⌥Return", "⌃⇧K".
     public var symbolicDescription: String {
         var text = ""
         if modifiers.contains(.control) { text += "⌃" }
         if modifiers.contains(.option) { text += "⌥" }
+        if modifiers.contains(.leftOption) { text += "왼쪽⌥" }
+        if modifiers.contains(.rightOption) { text += "오른쪽⌥" }
         if modifiers.contains(.shift) { text += "⇧" }
         if modifiers.contains(.command) { text += "⌘" }
+        if modifiers.contains(.leftCommand) { text += "왼쪽⌘" }
+        if modifiers.contains(.rightCommand) { text += "오른쪽⌘" }
         return text + key
     }
 
-    /// Virtual key code for `RegisterEventHotKey`; nil when the key name is not one we know.
+    /// Virtual key code for `RegisterEventHotKey` / `CGEvent`; nil when the key name is not one we know.
     public var carbonKeyCode: UInt32? {
         HotkeySpec.keyCodes[key.lowercased()]
     }
 
+    /// Every key code that counts as this key in a CGEvent: Return also accepts the keypad Enter.
+    public var eventKeyCodes: Set<UInt32> {
+        guard let code = carbonKeyCode else { return [] }
+        return code == 0x24 ? [0x24, 0x4C] : [code]
+    }
+
+    /// Whether a CGEvent's modifier flags (`CGEventFlags.rawValue`) satisfy this spec exactly:
+    /// the generic modifiers must match one-for-one, and a side-specific modifier needs its device bit.
+    public func matches(eventFlags flags: UInt64) -> Bool {
+        let command = flags & 0x0010_0000 != 0   // kCGEventFlagMaskCommand
+        let option = flags & 0x0008_0000 != 0    // kCGEventFlagMaskAlternate
+        let control = flags & 0x0004_0000 != 0   // kCGEventFlagMaskControl
+        let shift = flags & 0x0002_0000 != 0     // kCGEventFlagMaskShift
+
+        guard command == modifiers.wantsCommand,
+              option == modifiers.wantsOption,
+              control == modifiers.contains(.control),
+              shift == modifiers.contains(.shift) else {
+            return false
+        }
+
+        // NX_DEVICE*KEYMASK bits tell the two keys of a pair apart.
+        if modifiers.contains(.leftOption) && flags & 0x20 == 0 { return false }
+        if modifiers.contains(.rightOption) && flags & 0x40 == 0 { return false }
+        if modifiers.contains(.leftCommand) && flags & 0x08 == 0 { return false }
+        if modifiers.contains(.rightCommand) && flags & 0x10 == 0 { return false }
+        return true
+    }
+
     private static func parseModifier(_ token: String) -> HotkeyModifiers? {
-        switch token.lowercased() {
+        // "Right Option", "right-option" and "RightOption" are the same token.
+        let normalized = token.lowercased().filter { $0 != " " && $0 != "-" && $0 != "_" }
+        switch normalized {
         case "ctrl", "control", "⌃": return .control
         case "alt", "option", "opt", "⌥": return .option
+        case "leftoption", "loption", "lopt", "leftalt", "lalt", "왼쪽option", "왼쪽⌥": return .leftOption
+        case "rightoption", "roption", "ropt", "rightalt", "ralt", "오른쪽option", "오른쪽⌥": return .rightOption
         case "shift", "⇧": return .shift
         // "Win" is accepted so a settings file copied from the Windows launcher still parses.
         case "cmd", "command", "⌘", "win", "windows", "super": return .command
+        case "leftcmd", "leftcommand", "lcmd", "왼쪽⌘": return .leftCommand
+        case "rightcmd", "rightcommand", "rcmd", "오른쪽⌘": return .rightCommand
         default: return nil
         }
     }
 
-    /// Single letters are upper-cased so "k" and "K" are the same key; WPF digit names ("D1") become "1".
+    /// Single letters are upper-cased so "k" and "K" are the same key; WPF digit names ("D1") become "1";
+    /// "Enter" is the Return key.
     private static func normalizeKey(_ key: String) -> String {
         if key.count == 1, let scalar = key.unicodeScalars.first, scalar.isASCII, CharacterSet.letters.contains(scalar) {
             return key.uppercased()
         }
         if key.count == 2, key.hasPrefix("D"), let last = key.last, last.isNumber {
             return String(last)
+        }
+        if key.lowercased() == "enter" {
+            return "Return"
         }
         return key
     }

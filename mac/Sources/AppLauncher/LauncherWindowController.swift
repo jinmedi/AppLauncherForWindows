@@ -9,11 +9,14 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     private let panel: LauncherPanel
     private let launcherView: LauncherView
     private let viewModel: MainViewModel
+    /// Set when `ForceEnglishInput` is on: English layout while shown, previous layout restored on hide.
+    private let inputSwitcher: InputSourceSwitcher?
     /// Screen y of the panel's top edge while shown; the panel grows downward from here.
     private var anchorTop: CGFloat = 0
 
-    init(viewModel: MainViewModel) {
+    init(viewModel: MainViewModel, forceEnglishInput: Bool) {
         self.viewModel = viewModel
+        inputSwitcher = forceEnglishInput ? InputSourceSwitcher() : nil
         launcherView = LauncherView(viewModel: viewModel)
         panel = LauncherPanel(contentRect: NSRect(x: 0, y: 0, width: Self.panelWidth, height: 120))
         super.init()
@@ -35,10 +38,12 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
 
         panel.makeKeyAndOrderFront(nil)
         launcherView.focusSearchField()
+        inputSwitcher?.switchToEnglish()
     }
 
     func hide() {
         panel.orderOut(nil)
+        inputSwitcher?.restore()
     }
 
     func toggle() {

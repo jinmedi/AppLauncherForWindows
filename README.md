@@ -2,7 +2,7 @@
 
 Windows용 경량 앱 런처입니다. 전역 단축키(기본 `Alt+Space`)로 검색창을 띄우고, 설치된 앱을 빠르게 찾아 실행하는 것을 목표로 합니다.
 
-같은 기능의 **macOS용 런처**는 [`mac/`](mac/README.md)에 있습니다 (Swift + AppKit, 기본 단축키 `⌥Space`, 릴리스마다 `AppLauncher-vX.Y.Z-mac-universal.zip`이 함께 첨부됩니다).
+같은 기능의 **macOS용 런처**는 [`mac/`](mac/README.md)에 있습니다 (Swift + AppKit, 기본 단축키 오른쪽 `⌥`+`Return`, 릴리스마다 `AppLauncher-vX.Y.Z-mac-universal.zip`이 함께 첨부됩니다).
 
 ## 현재 상태
 

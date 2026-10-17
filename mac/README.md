@@ -1,12 +1,13 @@
 # AppLauncher for macOS
 
-Windows용 런처와 같은 기능을 가진 macOS 메뉴 막대 앱입니다. 전역 단축키(기본 `⌥Space`)로 검색창을 띄우고, 설치된 앱과 주요 폴더를 퍼지 검색으로 찾아 Enter로 실행하거나 Finder로 엽니다.
+Windows용 런처와 같은 기능을 가진 macOS 메뉴 막대 앱입니다. 전역 단축키(기본 **오른쪽 `⌥` + `Return`**)로 검색창을 띄우고, 설치된 앱과 주요 폴더를 퍼지 검색으로 찾아 Enter로 실행하거나 Finder로 엽니다.
 
 Swift + AppKit로 작성되어 .NET이 필요 없고, 결과물은 몇 MB짜리 `.app` 하나입니다.
 
 ## 기능 (Windows판과 동일)
 
-- `⌥Space`: 창 열기/닫기. 다른 앱의 포커스를 빼앗지 않는 떠 있는 패널로 열립니다
+- 오른쪽 `⌥` + `Return`: 창 열기/닫기. 다른 앱의 포커스를 빼앗지 않는 떠 있는 패널로 열립니다. 왼쪽 Option은 그대로 두므로 다른 앱의 `⌥Return` 단축키와 충돌하지 않습니다
+- 창이 열리면 키보드가 영어 자판(ABC/U.S.)으로 바뀌고, 닫히면 원래 입력 소스로 돌아갑니다. 한글로 검색하려면 창 안에서 평소처럼 한/영을 바꾸면 됩니다 (`ForceEnglishInput`으로 끌 수 있음)
 - 글자 입력: 결과 최대 8개, 첫 항목 자동 선택. 각 행 오른쪽에 "앱" 또는 "폴더" 표시
 - `↑` `↓` 선택 이동, `Enter` 또는 클릭: 앱 실행 또는 폴더를 Finder로 열고 창 숨김
 - `⌘1` ~ `⌘7`: 선택을 옮기지 않고 2번째~8번째 결과를 바로 실행 (`⌃1`~`⌃7`도 됩니다). 각 행 오른쪽에 해당 키가 표시됩니다
@@ -29,6 +30,7 @@ Swift + AppKit로 작성되어 .NET이 필요 없고, 결과물은 몇 MB짜리 
 [Releases](https://github.com/jinmedi/AppLauncherForWindows/releases)에서 `AppLauncher-vX.Y.Z-mac-universal.zip`을 내려받아 풀고 `AppLauncher.app`을 `/Applications`(또는 `~/Applications`)에 넣습니다. Apple Silicon과 Intel 모두 지원하는 유니버설 바이너리입니다.
 
 - 애플 개발자 인증서로 서명되지 않았으므로 처음 열 때 "확인되지 않은 개발자" 경고가 뜹니다. Finder에서 앱을 **오른쪽 클릭 → 열기**, 또는 시스템 설정 → 개인정보 보호 및 보안에서 "확인 없이 열기"를 누르면 됩니다. 터미널에서 `xattr -dr com.apple.quarantine /Applications/AppLauncher.app`을 실행해도 됩니다
+- **손쉬운 사용 권한**: 오른쪽 Option처럼 왼쪽/오른쪽을 구분하는 단축키는 macOS가 기본 제공하는 단축키 API로는 등록할 수 없어 키보드 이벤트 탭을 씁니다. 첫 실행 때 권한 요청 창이 뜨면 시스템 설정 → 개인정보 보호 및 보안 → **손쉬운 사용**에서 App Launcher를 켜고 앱을 다시 실행하세요. 권한이 없는 동안은 양쪽 `⌥Return` 모두로 동작합니다. 앱을 새로 빌드하면(ad-hoc 서명이 바뀌어) 권한을 다시 켜야 할 수 있습니다. `Hotkey`를 `"Cmd+Shift+Space"`처럼 좌우 구분 없는 조합으로 바꾸면 권한이 필요 없습니다
 - 로그인 시 자동 실행: `settings.json`의 `StartAtLogin`을 `true`로 바꾸거나 시스템 설정 → 일반 → 로그인 항목에 추가하세요
 - 업데이트는 `.app`만 바꾸면 됩니다. 설정과 기록은 `~/Library/Application Support/AppLauncherForMac/`에 따로 있습니다
 - 옆에 있는 `.sha256` 파일로 검증할 수 있습니다: `shasum -a 256 -c AppLauncher-vX.Y.Z-mac-universal.zip.sha256`
@@ -66,7 +68,7 @@ mac/
   Scripts/build-app.sh                .app 번들 조립 + ad-hoc 서명
   Sources/LauncherCore/               UI 의존 없는 라이브러리 (Linux에서도 빌드·테스트 가능)
     Models/AppEntry.swift             인덱스 항목
-    Models/HotkeySpec.swift           "Option+Space" 파싱, Carbon 키 코드 매핑
+    Models/HotkeySpec.swift           "RightOption+Return" 파싱, Carbon 키 코드·CGEvent 플래그 매칭
     Models/LauncherSettings.swift     설정 (Windows판과 같은 JSON 키)
     Search/FuzzyMatcher.swift         정확 > 접두 > 단어 시작 > 약어 > 포함 > 순서 일치 (NFC 정규화)
     Search/AppSearcher.swift          이름 + 키워드 랭킹, 다중 단어, 사용 기록 가산점
@@ -84,7 +86,9 @@ mac/
     LauncherView.swift                검색창, 결과 표, 상태·힌트 줄
     ResultRowView.swift               행 하이라이트, 아이콘·이름·경로·배지
     MainViewModel.swift               검색, 선택 이동, 실행
-    GlobalHotkey.swift                Carbon RegisterEventHotKey 래퍼
+    GlobalHotkey.swift                Carbon RegisterEventHotKey 래퍼 (좌우 구분 없는 조합)
+    EventTapHotkey.swift              CGEvent 탭 (오른쪽 Option 등 좌우 구분 조합, 손쉬운 사용 권한)
+    InputSourceSwitcher.swift         창 열 때 영어 자판으로, 닫을 때 원래대로 (TIS API)
     StatusBarController.swift         NSStatusItem (좌클릭 토글, 우클릭 메뉴)
     WorkspaceLauncher.swift           NSWorkspace로 앱 실행 / Finder로 폴더 열기
     IconCache.swift                   NSWorkspace 아이콘 캐시
@@ -99,17 +103,19 @@ mac/
 
 ```json
 {
-  "Hotkey": "Option+Space",
+  "Hotkey": "RightOption+Return",
   "StartAtLogin": false,
   "IncludeKnownFolders": true,
   "IncludeCloudDrives": true,
   "FolderRoots": [],
-  "FolderScanDepth": 2
+  "FolderScanDepth": 2,
+  "ForceEnglishInput": true
 }
 ```
 
-- `Hotkey`: 예 `"Cmd+Shift+Space"`, `"Ctrl+Option+K"`, `"⌘+⇧+Space"`. Windows판 파일의 `Alt`는 Option으로, `Win`은 Cmd로 읽습니다
+- `Hotkey`: 예 `"Cmd+Shift+Space"`, `"Ctrl+Option+K"`, `"⌘+⇧+Space"`, `"LeftCmd+Return"`. 수식어는 `Ctrl`, `Option`(`Alt`), `Shift`, `Cmd`(`Win`)와 좌우 구분형 `LeftOption`/`RightOption`(`RAlt`), `LeftCmd`/`RightCmd`. 좌우 구분형은 손쉬운 사용 권한이 필요합니다. Windows판 파일의 `Alt`는 Option으로, `Win`은 Cmd로 읽습니다
 - `StartAtLogin`: `true`면 시작할 때 로그인 항목으로 등록합니다 (`.app`으로 실행한 경우만)
+- `ForceEnglishInput`: `true`(기본)면 창이 열릴 때 사용 가능한 영어 자판(ABC, U.S. 우선)으로 바꾸고 닫힐 때 되돌립니다. 영어 자판이 입력 소스 목록에 없으면 아무 것도 하지 않습니다
 - `IncludeKnownFolders`, `IncludeCloudDrives`, `FolderRoots`, `FolderScanDepth`: Windows판과 같습니다. `FolderRoots`에는 `~/Projects`, `$HOME/Work`처럼 쓸 수 있습니다
 
 ### 폴더가 안 보일 때

@@ -20,13 +20,17 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
     /// How many levels below each root to index. 0 indexes only the roots themselves.
     public var folderScanDepth: Int = FolderScanner.defaultMaxDepth
 
+    /// Switch the keyboard to an English layout when the launcher opens, and back when it hides.
+    public var forceEnglishInput: Bool = true
+
     public init(
         hotkey: String = HotkeySpec.default.description,
         startAtLogin: Bool = false,
         includeKnownFolders: Bool = true,
         includeCloudDrives: Bool = true,
         folderRoots: [String] = [],
-        folderScanDepth: Int = FolderScanner.defaultMaxDepth
+        folderScanDepth: Int = FolderScanner.defaultMaxDepth,
+        forceEnglishInput: Bool = true
     ) {
         self.hotkey = hotkey
         self.startAtLogin = startAtLogin
@@ -34,6 +38,7 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
         self.includeCloudDrives = includeCloudDrives
         self.folderRoots = folderRoots
         self.folderScanDepth = folderScanDepth
+        self.forceEnglishInput = forceEnglishInput
     }
 
     public var hotkeyOrDefault: HotkeySpec {
@@ -48,6 +53,7 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
         case includeCloudDrives = "IncludeCloudDrives"
         case folderRoots = "FolderRoots"
         case folderScanDepth = "FolderScanDepth"
+        case forceEnglishInput = "ForceEnglishInput"
     }
 
     /// Every key is optional so an older or hand-edited file keeps its defaults for what it omits.
@@ -61,6 +67,7 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
         includeCloudDrives = try container.decodeIfPresent(Bool.self, forKey: .includeCloudDrives) ?? true
         folderRoots = try container.decodeIfPresent([String].self, forKey: .folderRoots) ?? []
         folderScanDepth = try container.decodeIfPresent(Int.self, forKey: .folderScanDepth) ?? FolderScanner.defaultMaxDepth
+        forceEnglishInput = try container.decodeIfPresent(Bool.self, forKey: .forceEnglishInput) ?? true
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -71,5 +78,6 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
         try container.encode(includeCloudDrives, forKey: .includeCloudDrives)
         try container.encode(folderRoots, forKey: .folderRoots)
         try container.encode(folderScanDepth, forKey: .folderScanDepth)
+        try container.encode(forceEnglishInput, forKey: .forceEnglishInput)
     }
 }
