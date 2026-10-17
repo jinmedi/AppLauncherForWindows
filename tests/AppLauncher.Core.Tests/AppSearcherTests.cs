@@ -75,6 +75,42 @@ public class AppSearcherTests
         Assert.Empty(AppSearcher.Search("qqqq", All));
     }
 
+    [Fact]
+    public void Search_OnEqualScore_AppOutranksFolder()
+    {
+        var folder = new AppEntry { Id = "folder:x", Name = "Slack", LaunchPath = @"C:\Users\me\Slack", Source = AppSource.Folder };
+        var app = new AppEntry { Id = "startmenu:x", Name = "Slack", LaunchPath = @"C:\fake\Slack.lnk", Source = AppSource.StartMenu };
+
+        var results = AppSearcher.Search("slack", [folder, app]);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(results[0].Score, results[1].Score);
+        Assert.Same(app, results[0].Entry);
+    }
+
+    [Fact]
+    public void Search_SameNamedFolders_ShallowerPathFirst()
+    {
+        var deep = new AppEntry { Id = "folder:deep", Name = "Downloads", LaunchPath = @"C:\Users\me\OneDrive\Backup\Downloads", Source = AppSource.Folder };
+        var root = new AppEntry { Id = "folder:root", Name = "Downloads", LaunchPath = @"C:\Users\me\Downloads", Source = AppSource.Folder };
+
+        var results = AppSearcher.Search("downloads", [deep, root]);
+
+        Assert.Same(root, results[0].Entry);
+        Assert.Same(deep, results[1].Entry);
+    }
+
+    [Fact]
+    public void Search_FolderWithBetterScore_StillWins()
+    {
+        var folder = new AppEntry { Id = "folder:x", Name = "Invoices", LaunchPath = @"C:\Users\me\Invoices", Source = AppSource.Folder };
+        var app = new AppEntry { Id = "startmenu:x", Name = "Invoice Tool Deluxe", LaunchPath = @"C:\fake\tool.lnk", Source = AppSource.StartMenu };
+
+        var results = AppSearcher.Search("invoices", [app, folder]);
+
+        Assert.Same(folder, results[0].Entry);
+    }
+
     private static AppEntry Make(string name, string exeName) => new()
     {
         Id = "test:" + name,

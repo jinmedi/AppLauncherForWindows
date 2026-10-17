@@ -47,11 +47,19 @@ public static class AppSearcher
 
         return results
             .OrderByDescending(r => r.Score)
+            .ThenBy(r => SourceRank(r.Entry.Source))
+            .ThenBy(r => PathDepth(r.Entry.LaunchPath))
             .ThenBy(r => r.Entry.Name.Length)
             .ThenBy(r => r.Entry.Name, StringComparer.CurrentCultureIgnoreCase)
             .Take(maxResults)
             .ToArray();
     }
+
+    /// <summary>On equal scores apps come before folders; there are far more folders and they are rarely the intent.</summary>
+    private static int SourceRank(AppSource source) => source == AppSource.Folder ? 1 : 0;
+
+    /// <summary>Among same-named folders the shallower one (e.g. the Downloads root) is listed first.</summary>
+    private static int PathDepth(string path) => path.Count(c => c is '\\' or '/');
 
     private static int ScoreEntry(string term, AppEntry entry)
     {

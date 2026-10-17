@@ -5,6 +5,7 @@ public enum AppSource
     StartMenu,
     Registry,
     Store,
+    Folder,
     Custom,
 }
 
