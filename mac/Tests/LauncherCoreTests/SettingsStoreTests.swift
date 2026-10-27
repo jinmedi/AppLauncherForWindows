@@ -8,6 +8,7 @@ final class SettingsStoreTests: TemporaryDirectoryTestCase {
         let settings = SettingsStore(filePath: settingsPath).load()
 
         XCTAssertEqual(settings.hotkey, "RightOption+Return")
+        XCTAssertEqual(settings.additionalHotkeys, ["RightOption+Return"])
         XCTAssertFalse(settings.startAtLogin)
         XCTAssertTrue(settings.includeKnownFolders)
         XCTAssertTrue(settings.includeCloudDrives)
@@ -89,5 +90,46 @@ final class SettingsStoreTests: TemporaryDirectoryTestCase {
 
     func testHotkeyOrDefault_FallsBackWhenTextIsInvalid() {
         XCTAssertEqual(LauncherSettings(hotkey: "nonsense").hotkeyOrDefault, HotkeySpec.default)
+    }
+
+    func testHotkeySpecs_AddsRightOptionReturn_WhenOlderFileNamesAnotherHotkey() {
+        writeFile(settingsPath, #"{ "Hotkey": "Cmd+Shift+Space" }"#)
+
+        let specs = SettingsStore(filePath: settingsPath).load().hotkeySpecs
+
+        XCTAssertEqual(specs, [
+            HotkeySpec(modifiers: [.command, .shift], key: "Space"),
+            HotkeySpec(modifiers: .rightOption, key: "Return"),
+        ])
+    }
+
+    func testHotkeySpecs_IsSingle_WhenDefaultsAreUsed() {
+        XCTAssertEqual(LauncherSettings().hotkeySpecs, [HotkeySpec.default])
+    }
+
+    func testHotkeySpecs_SkipsDuplicatesAndUnparseableEntries() {
+        let settings = LauncherSettings(hotkey: "Ctrl+Space", additionalHotkeys: ["ctrl + space", "nonsense", "RAlt+Enter", "Cmd+K"])
+
+        XCTAssertEqual(settings.hotkeySpecs, [
+            HotkeySpec(modifiers: .control, key: "Space"),
+            HotkeySpec(modifiers: .rightOption, key: "Return"),
+            HotkeySpec(modifiers: .command, key: "K"),
+        ])
+    }
+
+    func testHotkeySpecs_IsOnlyHotkey_WhenAdditionalHotkeysIsEmpty() {
+        writeFile(settingsPath, #"{ "Hotkey": "Cmd+Space", "AdditionalHotkeys": [] }"#)
+
+        XCTAssertEqual(SettingsStore(filePath: settingsPath).load().hotkeySpecs, [HotkeySpec(modifiers: .command, key: "Space")])
+    }
+
+    func testAdditionalHotkeys_RoundTrip() throws {
+        let store = SettingsStore(filePath: settingsPath)
+        try store.save(LauncherSettings(hotkey: "Cmd+Space", additionalHotkeys: ["RightOption+Return", "Ctrl+K"]))
+
+        let loaded = store.load()
+
+        XCTAssertEqual(loaded.additionalHotkeys, ["RightOption+Return", "Ctrl+K"])
+        XCTAssertTrue(try String(contentsOfFile: settingsPath, encoding: .utf8).contains("\"AdditionalHotkeys\""))
     }
 }
