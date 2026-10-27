@@ -103,6 +103,12 @@ public struct HotkeySpec: Hashable, Sendable, CustomStringConvertible {
         HotkeySpec(modifiers: HotkeyModifiers(rawValue: modifiers.carbonModifiers), key: key)
     }
 
+    /// True when both specs register the same chord. Key names are looked up case-insensitively
+    /// ("Ctrl+Space" and "ctrl+space" are one chord), which plain equality on `key` would miss.
+    public func isSameChord(as other: HotkeySpec) -> Bool {
+        modifiers == other.modifiers && key.caseInsensitiveCompare(other.key) == .orderedSame
+    }
+
     /// Settings-file form: "Ctrl+RightOption+Shift+Cmd+Key".
     public var description: String {
         var parts: [String] = []

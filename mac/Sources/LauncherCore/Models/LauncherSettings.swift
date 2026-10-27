@@ -58,7 +58,7 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
     public var hotkeySpecs: [HotkeySpec] {
         var specs = [hotkeyOrDefault]
         for text in additionalHotkeys {
-            if let spec = HotkeySpec.tryParse(text), !specs.contains(spec) {
+            if let spec = HotkeySpec.tryParse(text), !specs.contains(where: { $0.isSameChord(as: spec) }) {
                 specs.append(spec)
             }
         }

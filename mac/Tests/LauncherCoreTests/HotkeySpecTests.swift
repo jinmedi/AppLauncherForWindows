@@ -32,6 +32,15 @@ final class HotkeySpecTests: XCTestCase {
         }
     }
 
+    func testIsSameChord_IgnoresKeyNameCase_ButNotModifiers() {
+        let spec = HotkeySpec(modifiers: .control, key: "Space")
+
+        XCTAssertTrue(spec.isSameChord(as: HotkeySpec(modifiers: .control, key: "space")))
+        XCTAssertTrue(spec.isSameChord(as: try! HotkeySpec.parse("ctrl + SPACE")))
+        XCTAssertFalse(spec.isSameChord(as: HotkeySpec(modifiers: .control, key: "Return")))
+        XCTAssertFalse(spec.isSameChord(as: HotkeySpec(modifiers: [.control, .shift], key: "Space")))
+    }
+
     func testDescription_RoundTripsThroughParse() throws {
         let original = HotkeySpec(modifiers: [.control, .command], key: "Space")
         let text = original.description

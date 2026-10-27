@@ -108,7 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let toggle: () -> Void = { [weak self] in self?.windowController?.toggle() }
 
         var registered: [AnyObject] = []
-        var carbonSpecs: Set<HotkeySpec> = []
+        var carbonSpecs: [HotkeySpec] = []
         var deniedSideSpecific: [HotkeySpec] = []
         var failures: [String] = []
 
@@ -118,12 +118,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         func registerCarbon(_ spec: HotkeySpec) {
             // Two chords can collapse to the same generic form (e.g. a denied RightOption+Return and Option+Return).
-            guard !carbonSpecs.contains(spec) else { return }
+            guard !carbonSpecs.contains(where: { $0.isSameChord(as: spec) }) else { return }
             do {
                 let hotkey = try GlobalHotkey(spec: spec)
                 hotkey.onPressed = toggle
                 registered.append(hotkey)
-                carbonSpecs.insert(spec)
+                carbonSpecs.append(spec)
             } catch {
                 failures.append("\(spec.symbolicDescription): \(error)")
             }
