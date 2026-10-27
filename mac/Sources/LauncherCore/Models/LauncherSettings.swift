@@ -5,6 +5,12 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
     /// Hotkey text in the form understood by `HotkeySpec.tryParse`.
     public var hotkey: String = HotkeySpec.default.description
 
+    /// Extra chords that open the launcher alongside `hotkey`, in the same form. Defaults to right Option + Return
+    /// so a file that still names an older hotkey (e.g. "Cmd+Shift+Space") gets both. Set to `[]` to register only `hotkey`.
+    public var additionalHotkeys: [String] = Self.defaultAdditionalHotkeys
+
+    public static let defaultAdditionalHotkeys: [String] = [HotkeySpec.default.description]
+
     /// Register the app as a login item (SMAppService) on start. Only works when running from an .app bundle.
     public var startAtLogin: Bool = false
 
@@ -25,6 +31,7 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
 
     public init(
         hotkey: String = HotkeySpec.default.description,
+        additionalHotkeys: [String] = LauncherSettings.defaultAdditionalHotkeys,
         startAtLogin: Bool = false,
         includeKnownFolders: Bool = true,
         includeCloudDrives: Bool = true,
@@ -33,6 +40,7 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
         forceEnglishInput: Bool = true
     ) {
         self.hotkey = hotkey
+        self.additionalHotkeys = additionalHotkeys
         self.startAtLogin = startAtLogin
         self.includeKnownFolders = includeKnownFolders
         self.includeCloudDrives = includeCloudDrives
@@ -45,8 +53,21 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
         HotkeySpec.tryParse(hotkey) ?? HotkeySpec.default
     }
 
+    /// Every chord to register: `hotkeyOrDefault` first, then each parseable entry of `additionalHotkeys`,
+    /// in order and without duplicates. Unparseable entries are skipped.
+    public var hotkeySpecs: [HotkeySpec] {
+        var specs = [hotkeyOrDefault]
+        for text in additionalHotkeys {
+            if let spec = HotkeySpec.tryParse(text), !specs.contains(spec) {
+                specs.append(spec)
+            }
+        }
+        return specs
+    }
+
     private enum CodingKeys: String, CodingKey {
         case hotkey = "Hotkey"
+        case additionalHotkeys = "AdditionalHotkeys"
         case startAtLogin = "StartAtLogin"
         case startWithWindows = "StartWithWindows"
         case includeKnownFolders = "IncludeKnownFolders"
@@ -60,6 +81,7 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         hotkey = try container.decodeIfPresent(String.self, forKey: .hotkey) ?? HotkeySpec.default.description
+        additionalHotkeys = try container.decodeIfPresent([String].self, forKey: .additionalHotkeys) ?? Self.defaultAdditionalHotkeys
         startAtLogin = try container.decodeIfPresent(Bool.self, forKey: .startAtLogin)
             ?? container.decodeIfPresent(Bool.self, forKey: .startWithWindows)
             ?? false
@@ -73,6 +95,7 @@ public struct LauncherSettings: Codable, Equatable, Sendable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(hotkey, forKey: .hotkey)
+        try container.encode(additionalHotkeys, forKey: .additionalHotkeys)
         try container.encode(startAtLogin, forKey: .startAtLogin)
         try container.encode(includeKnownFolders, forKey: .includeKnownFolders)
         try container.encode(includeCloudDrives, forKey: .includeCloudDrives)

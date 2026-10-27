@@ -6,7 +6,7 @@ Swift + AppKit로 작성되어 .NET이 필요 없고, 결과물은 몇 MB짜리 
 
 ## 기능 (Windows판과 동일)
 
-- 오른쪽 `⌥` + `Return`: 창 열기/닫기. 다른 앱의 포커스를 빼앗지 않는 떠 있는 패널로 열립니다. 왼쪽 Option은 그대로 두므로 다른 앱의 `⌥Return` 단축키와 충돌하지 않습니다
+- 오른쪽 `⌥` + `Return`: 창 열기/닫기. 다른 앱의 포커스를 빼앗지 않는 떠 있는 패널로 열립니다. 왼쪽 Option은 그대로 두므로 다른 앱의 `⌥Return` 단축키와 충돌하지 않습니다. 설정 파일에 다른 `Hotkey`가 있어도 오른쪽 `⌥Return`은 함께 등록됩니다(`AdditionalHotkeys`)
 - 창이 열리면 키보드가 영어 자판(ABC/U.S.)으로 바뀌고, 닫히면 원래 입력 소스로 돌아갑니다. 한글로 검색하려면 창 안에서 평소처럼 한/영을 바꾸면 됩니다 (`ForceEnglishInput`으로 끌 수 있음)
 - 글자 입력: 결과 최대 8개, 첫 항목 자동 선택. 각 행 오른쪽에 "앱" 또는 "폴더" 표시
 - `↑` `↓` 선택 이동, `Enter` 또는 클릭: 앱 실행 또는 폴더를 Finder로 열고 창 숨김
@@ -104,6 +104,7 @@ mac/
 ```json
 {
   "Hotkey": "RightOption+Return",
+  "AdditionalHotkeys": ["RightOption+Return"],
   "StartAtLogin": false,
   "IncludeKnownFolders": true,
   "IncludeCloudDrives": true,
@@ -114,6 +115,7 @@ mac/
 ```
 
 - `Hotkey`: 예 `"Cmd+Shift+Space"`, `"Ctrl+Option+K"`, `"⌘+⇧+Space"`, `"LeftCmd+Return"`. 수식어는 `Ctrl`, `Option`(`Alt`), `Shift`, `Cmd`(`Win`)와 좌우 구분형 `LeftOption`/`RightOption`(`RAlt`), `LeftCmd`/`RightCmd`. 좌우 구분형은 손쉬운 사용 권한이 필요합니다. Windows판 파일의 `Alt`는 Option으로, `Win`은 Cmd로 읽습니다
+- `AdditionalHotkeys`: `Hotkey`와 함께 등록할 조합의 목록으로, 형식은 `Hotkey`와 같습니다. 기본값이 `["RightOption+Return"]`이어서 예전 설정 파일에 `"Hotkey": "Cmd+Shift+Space"`가 남아 있어도 두 조합 모두로 열립니다. 중복이나 해석할 수 없는 항목은 건너뛰고, `[]`로 두면 `Hotkey`만 등록합니다
 - `StartAtLogin`: `true`면 시작할 때 로그인 항목으로 등록합니다 (`.app`으로 실행한 경우만)
 - `ForceEnglishInput`: `true`(기본)면 창이 열릴 때 사용 가능한 영어 자판(ABC, U.S. 우선)으로 바꾸고 닫힐 때 되돌립니다. 영어 자판이 입력 소스 목록에 없으면 아무 것도 하지 않습니다
 - `IncludeKnownFolders`, `IncludeCloudDrives`, `FolderRoots`, `FolderScanDepth`: Windows판과 같습니다. `FolderRoots`에는 `~/Projects`, `$HOME/Work`처럼 쓸 수 있습니다
