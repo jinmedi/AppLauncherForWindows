@@ -138,6 +138,29 @@ public sealed class UsageHistoryTests : IDisposable
         Assert.Equal(thirteenLaunchesJustNow, history.BoostFor("app", "zzz"));
     }
 
+    [Fact]
+    public void MostUsed_OrdersByCount_ThenByMostRecentLaunch()
+    {
+        var history = NewHistory();
+
+        history.Record("twice-old", null);
+        history.Record("twice-old", null);
+        _now = _now.AddHours(1);
+        history.Record("once", null);
+        _now = _now.AddHours(1);
+        history.Record("twice-new", null);
+        history.Record("twice-new", null);
+        _now = _now.AddHours(1);
+        history.Record("thrice", null);
+        history.Record("thrice", null);
+        history.Record("thrice", null);
+
+        Assert.Equal(["thrice", "twice-new", "twice-old", "once"], history.MostUsed());
+        Assert.Equal(["thrice", "twice-new"], history.MostUsed(2));
+        Assert.Empty(history.MostUsed(0));
+        Assert.Empty(NewHistory().MostUsed());
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory))

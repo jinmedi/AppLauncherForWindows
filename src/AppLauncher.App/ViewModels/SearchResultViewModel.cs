@@ -10,7 +10,7 @@ public partial class SearchResultViewModel : ObservableObject
     [ObservableProperty]
     private ImageSource? _icon;
 
-    /// <summary>Key that launches this row: "Enter" for the first result, "Ctrl+1" for the second, and so on.</summary>
+    /// <summary>Key that launches this row: "Enter" for the first result, "Ctrl+2" for the second, and so on.</summary>
     [ObservableProperty]
     private string _shortcutHint = string.Empty;
 
