@@ -27,6 +27,7 @@ public partial class MainWindow : Window
         Left = workArea.Left + (workArea.Width - Width) / 2;
         Top = workArea.Top + workArea.Height * 0.18;
 
+        _viewModel.RefreshResults();
         Show();
         Activate();
         QueryBox.Focus();
@@ -51,11 +52,12 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        // Ctrl+1 launches the second result, Ctrl+2 the third, ... (Enter already covers the first).
+        // Ctrl+2 launches the second result, Ctrl+3 the third, ... (Enter already covers the first),
+        // so the digit matches the row number shown on screen.
         if (Keyboard.Modifiers == ModifierKeys.Control && TryGetDigit(e.Key, out var digit)
-            && digit >= 1 && digit <= MainViewModel.MaxShortcutDigit)
+            && digit >= 2 && digit <= MainViewModel.MaxShortcutDigit)
         {
-            _viewModel.LaunchAt(digit);
+            _viewModel.LaunchAt(digit - 1);
             e.Handled = true;
             return;
         }

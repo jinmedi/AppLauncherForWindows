@@ -68,6 +68,42 @@ public sealed class AppIndex
     public IReadOnlyList<SearchResult> Search(string? query, int maxResults = 8) =>
         AppSearcher.Search(query, Entries, maxResults, _history is null ? null : entry => _history.BoostFor(entry.Id, query));
 
+    /// <summary>
+    /// The most launched entries that are still in the index, most launched first (ties: most recent first).
+    /// Ids the index no longer knows (uninstalled apps, removed folders) are skipped. Empty without a history.
+    /// </summary>
+    public IReadOnlyList<SearchResult> MostUsed(int maxResults = 8)
+    {
+        if (_history is null || maxResults <= 0)
+        {
+            return [];
+        }
+
+        var byId = new Dictionary<string, AppEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in Entries)
+        {
+            byId.TryAdd(entry.Id, entry);
+        }
+
+        var results = new List<SearchResult>(maxResults);
+        foreach (var id in _history.MostUsed())
+        {
+            if (!byId.TryGetValue(id, out var entry))
+            {
+                continue;
+            }
+
+            var boost = _history.BoostFor(entry.Id, null);
+            results.Add(new SearchResult(entry, boost, boost));
+            if (results.Count == maxResults)
+            {
+                break;
+            }
+        }
+
+        return results;
+    }
+
     private static async Task<(IReadOnlyList<AppEntry> Entries, SourceReport Report)> ScanSourceAsync(IAppSource source, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();

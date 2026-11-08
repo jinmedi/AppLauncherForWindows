@@ -118,6 +118,28 @@ public sealed class UsageHistory
         }
     }
 
+    /// <summary>
+    /// Entry ids ordered by launch count, most launched first; ties go to the most recently launched.
+    /// The launcher shows these while the query is empty so the usual apps are one keystroke away.
+    /// </summary>
+    public IReadOnlyList<string> MostUsed(int max = int.MaxValue)
+    {
+        if (max <= 0)
+        {
+            return [];
+        }
+
+        lock (_gate)
+        {
+            return _records
+                .OrderByDescending(kv => kv.Value.Count)
+                .ThenByDescending(kv => kv.Value.LastLaunched)
+                .Take(max)
+                .Select(kv => kv.Key)
+                .ToArray();
+        }
+    }
+
     public int LaunchCount(string entryId)
     {
         lock (_gate)

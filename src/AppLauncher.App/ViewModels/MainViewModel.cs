@@ -40,7 +40,7 @@ public partial class MainViewModel : ObservableObject
         _history = history;
         _uiContext = SynchronizationContext.Current;
 
-        HintText = $"Enter 실행   ·   Ctrl+숫자 n+1번째 실행   ·   Esc 닫기   ·   {settings.GetHotkeyOrDefault()} 열기/닫기";
+        HintText = $"Enter 실행   ·   Ctrl+n n번째 실행   ·   Esc 닫기   ·   {settings.GetHotkeyOrDefault()} 열기/닫기";
         _index.Refreshed += (_, _) => RunOnUiThread(OnIndexRefreshed);
         UpdateStatus();
     }
@@ -80,7 +80,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Launches the result at <paramref name="index"/> (0-based). Enter covers index 0 (the selected row),
-    /// so Ctrl+1 maps to index 1, Ctrl+2 to index 2, and so on. Out-of-range indexes do nothing.
+    /// so Ctrl+2 maps to index 1, Ctrl+3 to index 2, and so on. Out-of-range indexes do nothing.
     /// </summary>
     public bool LaunchAt(int index)
     {
@@ -92,10 +92,10 @@ public partial class MainViewModel : ObservableObject
         return Launch(Results[index]);
     }
 
-    /// <summary>Highest Ctrl+digit that is meaningful: Ctrl+1 through Ctrl+(MaxResults - 1).</summary>
-    public static int MaxShortcutDigit => MaxResults - 1;
+    /// <summary>Highest Ctrl+digit that is meaningful: Ctrl+2 through Ctrl+MaxResults, matching the row number on screen.</summary>
+    public static int MaxShortcutDigit => MaxResults;
 
-    private static string ShortcutHintFor(int index) => index == 0 ? "Enter" : $"Ctrl+{index}";
+    private static string ShortcutHintFor(int index) => index == 0 ? "Enter" : $"Ctrl+{index + 1}";
 
     public bool Launch(SearchResultViewModel result)
     {
@@ -123,9 +123,16 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnQueryChanged(string value) => UpdateResults();
 
+    /// <summary>
+    /// Recomputes the list. Called when the window opens so the empty-query list reflects the latest launches,
+    /// which <see cref="Launch"/> records off the UI thread.
+    /// </summary>
+    public void RefreshResults() => UpdateResults();
+
+    /// <summary>With an empty query the most launched items are listed (by count), otherwise the search matches.</summary>
     private void UpdateResults()
     {
-        var matches = _index.Search(Query, MaxResults);
+        var matches = IsQueryEmpty ? _index.MostUsed(MaxResults) : _index.Search(Query, MaxResults);
 
         Results.Clear();
         foreach (var match in matches)
@@ -140,10 +147,7 @@ public partial class MainViewModel : ObservableObject
     private void OnIndexRefreshed()
     {
         UpdateStatus();
-        if (!IsQueryEmpty)
-        {
-            UpdateResults();
-        }
+        UpdateResults(); // also fills the empty-query list once the index knows the recorded ids
     }
 
     private void UpdateStatus()
