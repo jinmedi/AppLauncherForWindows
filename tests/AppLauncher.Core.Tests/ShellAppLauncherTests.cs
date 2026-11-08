@@ -5,12 +5,14 @@ namespace AppLauncher.Core.Tests;
 
 public class ShellAppLauncherTests
 {
+    private const string Target = @"C:\does-not-exist\App.exe";
+
     private static readonly AppEntry App = new()
     {
         Id = "test:app",
         Name = "App",
         LaunchPath = @"C:\does-not-exist\App.lnk",
-        TargetPath = @"C:\does-not-exist\App.exe",
+        TargetPath = Target,
     };
 
     private static readonly AppEntry Folder = new()
@@ -29,7 +31,7 @@ public class ShellAppLauncherTests
 
         new ShellAppLauncher(activator).Launch(App); // would throw if it tried to start the missing .lnk
 
-        Assert.Equal([App.TargetPath], activator.Asked);
+        Assert.Equal([Target], activator.Asked);
     }
 
     [Fact]
@@ -39,7 +41,7 @@ public class ShellAppLauncherTests
 
         Assert.ThrowsAny<Exception>(() => new ShellAppLauncher(activator).Launch(App));
 
-        Assert.Equal([App.TargetPath], activator.Asked);
+        Assert.Equal([Target], activator.Asked);
     }
 
     [Fact]
