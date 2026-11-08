@@ -18,6 +18,7 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.Equal("Alt+Space", settings.Hotkey);
         Assert.False(settings.StartWithWindows);
+        Assert.True(settings.ActivateRunningApps);
         Assert.True(settings.IncludeKnownFolders);
         Assert.True(settings.IncludeCloudDrives);
         Assert.Empty(settings.FolderRoots);
@@ -89,6 +90,17 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal("Ctrl+Shift+Space", loaded.Hotkey);
         Assert.True(loaded.StartWithWindows);
         Assert.False(File.Exists(SettingsPath + ".tmp"));
+    }
+
+    [Fact]
+    public void ActivateRunningApps_RoundTrips_AndDefaultsOnWhenOmitted()
+    {
+        var store = new SettingsStore(SettingsPath);
+        store.Save(new LauncherSettings { ActivateRunningApps = false });
+        Assert.False(store.Load().ActivateRunningApps);
+
+        File.WriteAllText(SettingsPath, "{ \"Hotkey\": \"Alt+Space\" }");
+        Assert.True(store.Load().ActivateRunningApps);
     }
 
     [Fact]

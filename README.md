@@ -74,6 +74,7 @@ dotnet run --project src/AppLauncher.App
 - 창이 열리면(검색어가 비어 있으면) 자주 실행한 항목이 실행 횟수순으로 최대 8개 표시됩니다. 같은 횟수면 최근에 실행한 것이 먼저이고, 첫 항목이 선택되어 있어 `Enter`만 눌러도 됩니다
 - 글자 입력: 결과 최대 8개 표시, 첫 항목 자동 선택. 각 행 오른쪽에 "앱" 또는 "폴더" 표시
 - `↑` `↓`: 선택 이동, `Enter` 또는 클릭: 앱 실행 또는 폴더 열기 후 창 숨김
+- 이미 실행 중인 앱은 새로 띄우지 않고 그 창을 앞으로 가져옵니다. 트레이에 숨어 있던 창도 바로 보여주므로 카카오톡처럼 두 번째 실행이 느린 앱도 트레이 아이콘을 더블클릭한 것처럼 즉시 뜹니다 (`ActivateRunningApps`로 끌 수 있음)
 - `Ctrl+2` ~ `Ctrl+8`: 선택을 옮기지 않고 2번째~8번째 결과를 바로 실행. 화면에 보이는 행 번호와 누르는 숫자가 같으며, 각 행 오른쪽에 해당 키가 표시됩니다 (1번째는 `Enter`)
 - 자주 실행한 항목이 위로 올라옵니다. 실행 횟수(최대 +300), 최근 실행(하루 이내 +60, 일주일 +40, 한 달 +20), 같은 검색어로 실행한 적이 있으면 +400(검색어가 일부만 겹치면 +200)을 매칭 점수에 더합니다. 기록은 `%APPDATA%\AppLauncherForWindows\history.json`에 저장되며, 6개월간 실행하지 않은 항목은 정리됩니다. 파일을 지우면 초기화됩니다
 - `Esc` 또는 포커스 이탈: 창 숨김
@@ -111,6 +112,7 @@ git push origin v0.1.0
 {
   "Hotkey": "Alt+Space",
   "StartWithWindows": false,
+  "ActivateRunningApps": true,
   "IncludeKnownFolders": true,
   "IncludeCloudDrives": true,
   "FolderRoots": [],
@@ -119,6 +121,7 @@ git push origin v0.1.0
 ```
 
 - `Hotkey`: 예 `"Ctrl+Shift+Space"`, `"Win+K"`
+- `ActivateRunningApps`: `true`(기본)면 선택한 앱의 실행 파일이 이미 돌고 있을 때 새 프로세스를 띄우는 대신 그 앱의 창을 보여주고 활성화합니다. 항상 새 창을 원하면(메모장, 탐색기 등) `false`로 두세요. 폴더는 설정과 무관하게 항상 새 탐색기 창으로 열립니다
 - `IncludeKnownFolders`: 바탕 화면, 문서, 다운로드, 사진, 동영상, 음악, 사용자 홈 폴더
 - `IncludeCloudDrives`: 실행할 때마다 자동 감지합니다. OneDrive(개인·회사, 환경 변수 기준), Google Drive(스트리밍 모드의 가상 드라이브 `G:\내 드라이브`, `공유 드라이브` 등과 미러 모드 폴더), Dropbox(`info.json` 기준), iCloud Drive
 - `FolderRoots`: 위에 더해 인덱싱할 폴더. `%USERPROFILE%` 같은 환경 변수를 쓸 수 있습니다. 두 플래그를 끄고 여기만 채우면 원하는 폴더만 검색됩니다

@@ -10,6 +10,12 @@ public sealed class LauncherSettings
 
     public bool StartWithWindows { get; set; }
 
+    /// <summary>
+    /// When the chosen app is already running, show its window instead of starting another copy. Tray-resident apps
+    /// (KakaoTalk) take seconds to hand a second instance over to the first; activating the window is instant.
+    /// </summary>
+    public bool ActivateRunningApps { get; set; } = true;
+
     /// <summary>Index Desktop, Documents, Downloads, Pictures, Videos, Music and the profile folder.</summary>
     public bool IncludeKnownFolders { get; set; } = true;
 
