@@ -92,7 +92,8 @@ public partial class App : Application
             return history;
         });
         services.AddSingleton<AppIndex>();
-        services.AddSingleton<IAppLauncher, ShellAppLauncher>();
+        services.AddSingleton<IAppLauncher>(sp =>
+            new ShellAppLauncher(sp.GetRequiredService<LauncherSettings>().ActivateRunningApps ? new RunningAppActivator() : null));
         services.AddSingleton<IconExtractor>();
 
         services.AddSingleton<MainViewModel>();
