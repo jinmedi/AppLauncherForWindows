@@ -6,8 +6,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Posted by a second copy of the app so the running one shows its window instead.
     static let showNotification = Notification.Name("com.jinmedi.AppLauncher.show")
 
-    /// Either a Carbon `GlobalHotkey` or an `EventTapHotkey`, depending on the chord.
-    private var hotkey: AnyObject?
+    /// One entry per registered hotkey (Carbon `GlobalHotkey` or `EventTapHotkey`).
+    private var hotkeys: [AnyObject] = []
     private var statusBar: StatusBarController?
     private var windowController: LauncherWindowController?
     private var index: AppIndex?
@@ -33,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let windowController = LauncherWindowController(viewModel: viewModel, forceEnglishInput: settings.forceEnglishInput)
         self.windowController = windowController
 
-        registerHotkey(settings.hotkeyOrDefault)
+        registerHotkeys(settings)
 
         statusBar = StatusBarController(
             onToggle: { [weak windowController] in windowController?.toggle() },
@@ -65,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        hotkey = nil
+        hotkeys.removeAll()
         DistributedNotificationCenter.default().removeObserver(self)
     }
 
@@ -101,38 +101,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Side-specific chords (right Option + Return) go through an event tap, which needs the Accessibility
-    /// permission. Without it the chord falls back to its generic form (either Option key) via Carbon.
-    private func registerHotkey(_ spec: HotkeySpec) {
+    /// Registers the primary hotkey from settings and, if different, also registers RightOption+Return
+    /// as a secondary hotkey so the launcher is always reachable with that chord.
+    private func registerHotkeys(_ settings: LauncherSettings) {
+        hotkeys.removeAll()
         let toggle: () -> Void = { [weak self] in self?.windowController?.toggle() }
 
+        let primarySpec = settings.hotkeyOrDefault
+        registerSingleHotkey(primarySpec, onPressed: toggle, warnOnFailure: true)
+
+        let secondarySpec = HotkeySpec.default
+        if primarySpec != secondarySpec {
+            registerSingleHotkey(secondarySpec, onPressed: toggle, warnOnFailure: false)
+        }
+    }
+
+    /// Side-specific chords go through an event tap (Accessibility permission required).
+    /// Without it the chord falls back to its generic form via Carbon.
+    /// `warnOnFailure` controls whether the user sees an alert on fallback or silent failure.
+    private func registerSingleHotkey(_ spec: HotkeySpec, onPressed toggle: @escaping () -> Void, warnOnFailure: Bool) {
         if spec.requiresEventTap {
-            if EventTapHotkey.isAccessibilityTrusted(prompt: true), let tap = try? EventTapHotkey(spec: spec) {
+            if EventTapHotkey.isAccessibilityTrusted(prompt: warnOnFailure),
+               let tap = try? EventTapHotkey(spec: spec) {
                 tap.onPressed = toggle
-                hotkey = tap
+                hotkeys.append(tap)
                 return
             }
 
             let fallback = spec.genericEquivalent
-            showWarning(
-                "단축키 \(spec.symbolicDescription)처럼 왼쪽/오른쪽을 구분하는 조합은 손쉬운 사용 권한이 필요합니다.\n\n"
-                + "시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용에서 App Launcher를 켠 뒤 다시 실행하세요. "
-                + "그동안은 양쪽 \(fallback.symbolicDescription)로 동작합니다."
-            )
-            registerCarbonHotkey(fallback, onPressed: toggle)
+            if warnOnFailure {
+                showWarning(
+                    "단축키 \(spec.symbolicDescription)처럼 왼쪽/오른쪽을 구분하는 조합은 손쉬운 사용 권한이 필요합니다.\n\n"
+                    + "시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용에서 App Launcher를 켠 뒤 다시 실행하세요. "
+                    + "그동안은 양쪽 \(fallback.symbolicDescription)로 동작합니다."
+                )
+            }
+            addCarbonHotkey(fallback, onPressed: toggle, warnOnFailure: warnOnFailure)
             return
         }
 
-        registerCarbonHotkey(spec, onPressed: toggle)
+        addCarbonHotkey(spec, onPressed: toggle, warnOnFailure: warnOnFailure)
     }
 
-    private func registerCarbonHotkey(_ spec: HotkeySpec, onPressed: @escaping () -> Void) {
+    private func addCarbonHotkey(_ spec: HotkeySpec, onPressed: @escaping () -> Void, warnOnFailure: Bool) {
         do {
             let hotkey = try GlobalHotkey(spec: spec)
             hotkey.onPressed = onPressed
-            self.hotkey = hotkey
+            hotkeys.append(hotkey)
         } catch {
-            showWarning("전역 단축키 \(spec)을(를) 등록하지 못했습니다. 다른 프로그램이 같은 단축키를 사용 중일 수 있습니다.\n\n\(error)")
+            if warnOnFailure {
+                showWarning("전역 단축키 \(spec)을(를) 등록하지 못했습니다. 다른 프로그램이 같은 단축키를 사용 중일 수 있습니다.\n\n\(error)")
+            }
         }
     }
 

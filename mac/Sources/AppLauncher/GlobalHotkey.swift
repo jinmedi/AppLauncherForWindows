@@ -17,6 +17,8 @@ final class GlobalHotkey {
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
 
+    private static var nextID: UInt32 = 1
+
     init(spec: HotkeySpec) throws {
         guard let keyCode = spec.carbonKeyCode else {
             throw RegistrationError(message: "알 수 없는 키 이름: \(spec.key)")
@@ -40,7 +42,9 @@ final class GlobalHotkey {
             throw RegistrationError(message: "InstallEventHandler failed (\(installStatus))")
         }
 
-        let hotKeyID = EventHotKeyID(signature: Self.signature, id: 1)
+        let id = Self.nextID
+        Self.nextID += 1
+        let hotKeyID = EventHotKeyID(signature: Self.signature, id: id)
         let registerStatus = RegisterEventHotKey(keyCode, spec.modifiers.carbonModifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
         guard registerStatus == noErr else {
             if let handlerRef {

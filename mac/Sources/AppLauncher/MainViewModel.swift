@@ -6,8 +6,8 @@ import LauncherCore
 final class MainViewModel {
     static let maxResults = 8
 
-    /// Highest digit that is meaningful: ⌘1 through ⌘(maxResults - 1).
-    static var maxShortcutDigit: Int { maxResults - 1 }
+    /// Highest digit that is meaningful: ⌘2 through ⌘maxResults.
+    static var maxShortcutDigit: Int { maxResults }
 
     struct Row {
         let entry: AppEntry
@@ -56,7 +56,7 @@ final class MainViewModel {
         self.history = history
 
         let hotkey = settings.hotkeyOrDefault.symbolicDescription
-        hintText = "Enter 실행   ·   ⌘숫자 n+1번째 실행   ·   Esc 닫기   ·   \(hotkey) 열기/닫기"
+        hintText = "Enter 실행   ·   ⌘n n번째 실행   ·   Esc 닫기   ·   \(hotkey) 열기/닫기"
 
         index.onRefreshed = { [weak self] in self?.indexRefreshed() }
         updateStatus()
@@ -114,7 +114,7 @@ final class MainViewModel {
     }
 
     private static func shortcutHint(for index: Int) -> String {
-        index == 0 ? "Enter" : "⌘\(index)"
+        index == 0 ? "Enter" : "⌘\(index + 1)"
     }
 
     private func updateResults() {

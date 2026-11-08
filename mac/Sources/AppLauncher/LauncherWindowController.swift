@@ -58,7 +58,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         hide()
     }
 
-    /// ⌘1 launches the second result, ⌘2 the third, ... (Enter already covers the first). Ctrl works too,
+    /// ⌘2 launches the second result, ⌘3 the third, ... (Enter already covers the first). Ctrl works too,
     /// for hands used to the Windows launcher. Esc hides even when the field editor did not see it.
     private func interceptKey(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
@@ -67,8 +67,8 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
            let characters = event.charactersIgnoringModifiers,
            characters.count == 1,
            let digit = Int(characters),
-           digit >= 1, digit <= MainViewModel.maxShortcutDigit {
-            viewModel.launchAt(digit)
+           digit >= 2, digit <= MainViewModel.maxShortcutDigit {
+            viewModel.launchAt(digit - 1)
             return true
         }
 
