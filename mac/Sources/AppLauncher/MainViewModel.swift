@@ -6,12 +6,12 @@ import LauncherCore
 final class MainViewModel {
     static let maxResults = 8
 
-    /// Highest digit that is meaningful: ⌘1 through ⌘(maxResults - 1).
-    static var maxShortcutDigit: Int { maxResults - 1 }
+    /// Highest digit that is meaningful: ⌘2 through ⌘maxResults.
+    static var maxShortcutDigit: Int { maxResults }
 
     struct Row {
         let entry: AppEntry
-        /// Key that launches this row: "Enter" for the first result, "⌘1" for the second, and so on.
+        /// Key that launches this row: "Enter" for the first result, "⌘2" for the second, and so on.
         let shortcutHint: String
 
         var name: String { entry.name }
@@ -56,7 +56,7 @@ final class MainViewModel {
         self.history = history
 
         let hotkey = settings.hotkeyOrDefault.symbolicDescription
-        hintText = "Enter 실행   ·   ⌘숫자 n+1번째 실행   ·   Esc 닫기   ·   \(hotkey) 열기/닫기"
+        hintText = "Enter 실행   ·   ⌘n n번째 실행   ·   Esc 닫기   ·   \(hotkey) 열기/닫기"
 
         index.onRefreshed = { [weak self] in self?.indexRefreshed() }
         updateStatus()
@@ -80,7 +80,7 @@ final class MainViewModel {
         return launch(results[selectedIndex])
     }
 
-    /// Launches the result at `index` (0-based). Enter covers index 0, so ⌘1 maps to index 1, ⌘2 to index 2, ...
+    /// Launches the result at `index` (0-based). Enter covers index 0, so ⌘2 maps to index 1, ⌘3 to index 2, ...
     @discardableResult
     func launchAt(_ index: Int) -> Bool {
         guard index >= 0, index < results.count else {
@@ -114,7 +114,7 @@ final class MainViewModel {
     }
 
     private static func shortcutHint(for index: Int) -> String {
-        index == 0 ? "Enter" : "⌘\(index)"
+        index == 0 ? "Enter" : "⌘\(index + 1)"
     }
 
     private func updateResults() {
